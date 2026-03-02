@@ -1,11 +1,16 @@
-const container = document.getElementById('projects');
+// Home - Projects Management with SQLite
 
-let projects = JSON.parse(localStorage.getItem('3lo_projects')) || [
-  { id: '1', name: 'My First Board', created: Date.now() }
-];
+let projects = [];
+let currentProjectId = null;
 
-function save() {
-  localStorage.setItem('3lo_projects', JSON.stringify(projects));
+async function init() {
+  await initDB();
+  await loadProjects();
+}
+
+async function loadProjects() {
+  projects = await getAllProjects();
+  render();
 }
 
 function formatDate(ts) {
@@ -13,6 +18,7 @@ function formatDate(ts) {
 }
 
 function render() {
+  const container = document.getElementById('projects');
   container.innerHTML = '';
   
   projects.forEach(proj => {
@@ -20,7 +26,7 @@ function render() {
     card.className = 'project-card';
     card.innerHTML = `
       <h3>${proj.name}</h3>
-      <p>Created: ${formatDate(proj.created)}</p>
+      <p>Created: ${formatDate(proj.created_at)}</p>
       <div class="project-actions">
         <button class="btn-open" data-id="${proj.id}">Open</button>
         <button class="btn-export" data-id="${proj.id}">Export</button>
@@ -31,7 +37,7 @@ function render() {
   });
   
   document.querySelectorAll('.btn-open').forEach(btn => {
-    btn.addEventListener('click', (e) => {
+    btn.addEventListener('click', async (e) => {
       const id = e.target.dataset.id;
       localStorage.setItem('3lo_current_project', id);
       window.location.href = './board.html';
@@ -39,22 +45,21 @@ function render() {
   });
   
   document.querySelectorAll('.btn-delete').forEach(btn => {
-    btn.addEventListener('click', (e) => {
+    btn.addEventListener('click', async (e) => {
       const id = e.target.dataset.id;
       if (confirm('Delete this project?')) {
-        projects = projects.filter(p => p.id !== id);
-        save();
-        render();
+        await deleteProject(id);
+        await loadProjects();
       }
     });
   });
   
   document.querySelectorAll('.btn-export').forEach(btn => {
-    btn.addEventListener('click', (e) => {
+    btn.addEventListener('click', async (e) => {
       const id = e.target.dataset.id;
-      const proj = projects.find(p => p.id === id);
-      const boards = JSON.parse(localStorage.getItem('3lo_columns_' + id) || '[]');
-      const data = { project: proj, boards: boards };
+      const proj = projects.find(p => p.id == id);
+      const board = await getBoard(id);
+      const data = { project: { id: proj.id, name: proj.name, created_at: proj.created_at }, board: board };
       const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
@@ -65,14 +70,12 @@ function render() {
   });
 }
 
-document.getElementById('new-project').addEventListener('click', () => {
+document.getElementById('new-project').addEventListener('click', async () => {
   const name = prompt('Project name:');
   if (name) {
-    const id = Date.now().toString();
-    projects.push({ id, name, created: Date.now() });
-    save();
-    render();
+    await createProject(name);
+    await loadProjects();
   }
 });
 
-render();
+init();

@@ -1,11 +1,11 @@
-// 3LO Database - SQLite via Tauri
-
-import Database from "@tauri-apps/plugin-sql";
+// 3LO Database - SQLite via Tauri (Vanilla JS)
+// Compatible with classic <script> tags
 
 const DB_NAME = "sqlite:3lo.db";
 let db = null;
 
-export async function initDB() {
+async function initDB() {
+  const { default: Database } = await import("@tauri-apps/plugin-sql");
   db = await Database.load(DB_NAME);
   
   await db.execute(`
@@ -37,20 +37,20 @@ export async function initDB() {
   `);
 }
 
-export async function getAllProjects() {
+async function getAllProjects() {
   return await db.select("SELECT * FROM projects ORDER BY created_at DESC");
 }
 
-export async function createProject(name) {
+async function createProject(name) {
   const result = await db.execute("INSERT INTO projects (name, created_at) VALUES (?, ?)", [name, Date.now()]);
   return result.lastInsertId;
 }
 
-export async function deleteProject(id) {
+async function deleteProject(id) {
   await db.execute("DELETE FROM projects WHERE id = ?", [id]);
 }
 
-export async function getBoard(projectId) {
+async function getBoard(projectId) {
   const columns = await db.select("SELECT * FROM columns WHERE project_id = ? ORDER BY position", [projectId]);
   for (const col of columns) {
     col.cards = await db.select("SELECT * FROM cards WHERE column_id = ? ORDER BY position", [col.id]);
@@ -58,37 +58,36 @@ export async function getBoard(projectId) {
   return columns;
 }
 
-export async function createColumn(projectId, title, position) {
+async function createColumn(projectId, title, position) {
   const result = await db.execute("INSERT INTO columns (project_id, title, position) VALUES (?, ?, ?)", [projectId, title, position]);
   return result.lastInsertId;
 }
 
-export async function updateColumnTitle(id, title) {
+async function updateColumnTitle(id, title) {
   await db.execute("UPDATE columns SET title = ? WHERE id = ?", [title, id]);
 }
 
-export async function deleteColumn(id) {
+async function deleteColumn(id) {
   await db.execute("DELETE FROM columns WHERE id = ?", [id]);
 }
 
-export async function createCard(columnId, text, position) {
+async function createCard(columnId, text, position) {
   const result = await db.execute("INSERT INTO cards (column_id, text, position) VALUES (?, ?, ?)", [columnId, text, position]);
   return result.lastInsertId;
 }
 
-export async function updateCardText(id, text) {
+async function updateCardText(id, text) {
   await db.execute("UPDATE cards SET text = ? WHERE id = ?", [text, id]);
 }
 
-export async function deleteCard(id) {
+async function deleteCard(id) {
   await db.execute("DELETE FROM cards WHERE id = ?", [id]);
 }
 
-export async function updateCardPosition(id, columnId, position) {
+async function updateCardPosition(id, columnId, position) {
   await db.execute("UPDATE cards SET column_id = ?, position = ? WHERE id = ?", [columnId, position, id]);
 }
 
-export async function updateColumnPosition(id, position) {
+async function updateColumnPosition(id, position) {
   await db.execute("UPDATE columns SET position = ? WHERE id = ?", [position, id]);
 }
-,
