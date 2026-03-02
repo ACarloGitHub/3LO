@@ -1,14 +1,23 @@
-// Board Page - Kanban with localStorage
+// Board Page - Kanban with Notes & Sorting
 
 let columns = [];
-let cardCounter = parseInt(localStorage.getItem('3lo_card_counter')) || 2;
-let colCounter = parseInt(localStorage.getItem('3lo_col_counter')) || 4;
+let cardsData = {}; // Per tracciare metadati (createDate, modifiedDate, notes)
 let currentProjectId = null;
+let sortMode = 'manual'; // manual, name-asc, name-desc, created-asc, created-desc, modified-asc, modified-desc
 
 function save() {
   localStorage.setItem('3lo_board_' + currentProjectId, JSON.stringify(columns));
-  localStorage.setItem('3lo_card_counter', cardCounter);
-  localStorage.setItem('3lo_col_counter', colCounter);
+  localStorage.setItem('3lo_cards_data_' + currentProjectId, JSON.stringify(cardsData));
+}
+
+function initCardData(cardId) {
+  if (!cardsData[cardId]) {
+    cardsData[cardId] = {
+      created: Date.now(),
+      modified: Date.now(),
+      note: ''
+    };
+  }
 }
 
 function createColumn(column) {
@@ -43,7 +52,7 @@ function createColumn(column) {
   });
   
   const cardsContainer = colEl.querySelector('.cards');
-  column.cards.forEach(card => {
+  (column.cards || []).forEach(card => {
     cardsContainer.appendChild(createCard(card));
   });
   
@@ -62,17 +71,90 @@ function createColumn(column) {
 }
 
 function createCard(card) {
+  initCardData(card.id);
   const cardEl = document.createElement('div');
   cardEl.className = 'card';
   cardEl.dataset.id = card.id;
-  cardEl.innerHTML = `<div class="card-text" contenteditable="true">${card.text}</div>`;
+  cardEl.innerHTML = `
+    <div class="card-text" contenteditable="true">${card.text}</div>
+    <div class="card-actions">
+      <button class="card-note-btn">📝 Note</button>
+    </div>
+  `;
   
   cardEl.querySelector('.card-text').addEventListener('blur', (e) => {
     card.text = e.target.textContent;
+    cardsData[card.id].modified = Date.now();
     save();
   });
   
+  cardEl.querySelector('.card-note-btn').addEventListener('click', (e) => {
+    e.stopPropagation();
+    openNoteModal(card.id);
+  });
+  
   return cardEl;
+}
+
+function openNoteModal(cardId) {
+  initCardData(cardId);
+  const modal = document.createElement('div');
+  modal.className = 'card-note-modal active';
+  modal.innerHTML = `
+    <div class="card-note-content">
+      <div class="card-note-header">
+        <h3>Card Note</h3>
+        <button class="btn-secondary" onclick="this.closest('.card-note-modal').remove()">Close</button>
+      </div>
+      <textarea class="card-note-textarea" placeholder="Add notes about this card...">${cardsData[cardId].note}</textarea>
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 1rem;">
+        <span style="font-size: 0.8rem; color: rgba(255,255,255,0.5)">Created: ${new Date(cardsData[cardId].created).toLocaleString()}</span>
+        <button class="btn-primary" id="save-note">Save Note</button>
+      </div>
+    </div>
+  `;
+  
+  modal.addEventListener('click', (e) => {
+    if (e.target === modal) modal.remove();
+  });
+  
+  modal.querySelector('#save-note').addEventListener('click', () => {
+    cardsData[cardId].note = modal.querySelector('.card-note-textarea').value;
+    cardsData[cardId].modified = Date.now();
+    save();
+    modal.remove();
+  });
+  
+  document.body.appendChild(modal);
+}
+
+function sortCards(columnId, cards) {
+  if (sortMode === 'manual') return cards;
+  
+  const sorted = [...cards];
+  sorted.forEach(c => initCardData(c.id));
+  
+  switch(sortMode) {
+    case 'name-asc':
+      sorted.sort((a, b) => a.text.localeCompare(b.text));
+      break;
+    case 'name-desc':
+      sorted.sort((a, b) => b.text.localeCompare(a.text));
+      break;
+    case 'created-asc':
+      sorted.sort((a, b) => cardsData[a.id].created - cardsData[b.id].created);
+      break;
+    case 'created-desc':
+      sorted.sort((a, b) => cardsData[b.id].created - cardsData[a.id].created);
+      break;
+    case 'modified-asc':
+      sorted.sort((a, b) => cardsData[a.id].modified - cardsData[b.id].modified);
+      break;
+    case 'modified-desc':
+      sorted.sort((a, b) => cardsData[b.id].modified - cardsData[a.id].modified);
+      break;
+  }
+  return sorted;
 }
 
 function addCardUI(container, columnId) {
@@ -103,10 +185,19 @@ function addCardUI(container, columnId) {
     if (textarea.value.trim()) {
       const cardId = Date.now().toString();
       const card = { id: cardId, text: textarea.value.trim() };
+      initCardData(cardId);
+      cardsData[cardId].created = Date.now();
+      cardsData[cardId].modified = Date.now();
+      
       const column = columns.find(c => c.id === columnId);
       column.cards.push(card);
-      container.appendChild(createCard(card));
+      
+      if (sortMode !== 'manual') {
+        column.cards = sortCards(columnId, column.cards);
+      }
+      
       save();
+      render();
     }
     wrapper.remove();
     btn.style.display = 'block';
@@ -124,10 +215,11 @@ function updateCardOrder() {
     const colId = colEl.dataset.id;
     const column = columns.find(c => c.id === colId);
     const cardEls = colEl.querySelectorAll('.card');
-    column.cards = Array.from(cardEls).map(el => ({
-      id: el.dataset.id,
-      text: el.querySelector('.card-text').textContent
-    }));
+    column.cards = Array.from(cardEls).map(el => {
+      const id = el.dataset.id;
+      const text = el.querySelector('.card-text').textContent;
+      return { id, text };
+    });
   });
   save();
 }
@@ -151,9 +243,47 @@ function init() {
     { id: '3', title: 'Done', cards: [] }
   ]));
   
+  cardsData = JSON.parse(localStorage.getItem('3lo_cards_data_' + currentProjectId) || '{}');
+  
+  // Inizializza dati per card esistenti
+  columns.forEach(col => {
+    col.cards.forEach(card => initCardData(card.id));
+  });
+  
+  render();
+}
+
+function render() {
   const board = document.getElementById('board');
   board.innerHTML = '';
+  
+  // Sort controls
+  const sortDiv = document.createElement('div');
+  sortDiv.className = 'note-sort-controls';
+  sortDiv.innerHTML = `
+    <label>Sort by:</label>
+    <select id="sort-select">
+      <option value="manual">Manual (drag)</option>
+      <option value="name-asc">Name ↑</option>
+      <option value="name-desc">Name ↓</option>
+      <option value="created-asc">Created ↑</option>
+      <option value="created-desc">Created ↓</option>
+      <option value="modified-asc">Modified ↑</option>
+      <option value="modified-desc">Modified ↓</option>
+    </select>
+  `;
+  board.appendChild(sortDiv);
+  
+  sortDiv.querySelector('#sort-select').addEventListener('change', (e) => {
+    sortMode = e.target.value;
+    render();
+  });
+  
   columns.forEach(column => {
+    // Sort cards se non in modalità manuale
+    if (sortMode !== 'manual') {
+      column.cards = sortCards(column.id, column.cards);
+    }
     board.appendChild(createColumn(column));
   });
   
@@ -165,28 +295,31 @@ function init() {
       onEnd: () => {
         const newOrder = [];
         document.querySelectorAll('.column').forEach(el => {
-          newOrder.push(columns.find(c => c.id === el.dataset.id));
+          const colId = el.dataset.id;
+          if (colId) {
+            newOrder.push(columns.find(c => c.id === colId));
+          }
         });
         columns = newOrder;
         save();
       }
     });
   }
-  
-  document.getElementById('back').addEventListener('click', () => {
-    window.location.href = './index.html';
-  });
-  
-  document.getElementById('add-list').addEventListener('click', () => {
-    const title = prompt('List name:');
-    if (title) {
-      const colId = Date.now().toString();
-      const column = { id: colId, title, cards: [] };
-      columns.push(column);
-      board.appendChild(createColumn(column));
-      save();
-    }
-  });
 }
+
+document.getElementById('back').addEventListener('click', () => {
+  window.location.href = './index.html';
+});
+
+document.getElementById('add-list').addEventListener('click', () => {
+  const title = prompt('List name:');
+  if (title) {
+    const colId = Date.now().toString();
+    const column = { id: colId, title, cards: [] };
+    columns.push(column);
+    render();
+    save();
+  }
+});
 
 init();

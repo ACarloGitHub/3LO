@@ -1,4 +1,4 @@
-// Home - Projects Management (Compact View)
+// Home - Projects Management (Grid View)
 
 let projects = JSON.parse(localStorage.getItem('3lo_projects')) || [];
 
@@ -26,25 +26,25 @@ function render() {
   }
   
   projects.forEach(proj => {
-    const item = document.createElement('div');
-    item.className = 'project-item';
-    item.innerHTML = `
+    const card = document.createElement('div');
+    card.className = 'project-card';
+    card.innerHTML = `
       <div class="project-icon">🌙</div>
-      <div class="project-info">
-        <div class="project-title">${proj.name}</div>
-        <div class="project-meta">Created ${formatDate(proj.created)} · Click to open</div>
-      </div>
+      <div class="project-title">${proj.name}</div>
+      <div class="project-meta">${formatDate(proj.created)}</div>
       <div class="project-actions">
         <button class="btn-open" data-id="${proj.id}">Open</button>
-        <button class="btn-export" data-id="${proj.id}">Export</button>
-        <button class="btn-delete" data-id="${proj.id}">Delete</button>
+        <button class="btn-export" data-id="${proj.id}">Exp</button>
+        <button class="btn-delete" data-id="${proj.id}">Del</button>
       </div>
     `;
-    container.appendChild(item);
+    container.appendChild(card);
   });
   
+  // Event listeners
   document.querySelectorAll('.btn-open').forEach(btn => {
     btn.addEventListener('click', (e) => {
+      e.stopPropagation();
       const id = e.target.dataset.id;
       localStorage.setItem('3lo_current_project', id);
       window.location.href = './board.html';
@@ -79,11 +79,11 @@ function render() {
     });
   });
   
-  // Click on item opens project
-  document.querySelectorAll('.project-item').forEach(item => {
-    item.addEventListener('click', (e) => {
+  // Click on card opens project
+  document.querySelectorAll('.project-card').forEach(card => {
+    card.addEventListener('click', (e) => {
       if (!e.target.closest('button')) {
-        const id = item.querySelector('.btn-open').dataset.id;
+        const id = card.querySelector('.btn-open').dataset.id;
         localStorage.setItem('3lo_current_project', id);
         window.location.href = './board.html';
       }
