@@ -1,9 +1,8 @@
-// Board Page - Kanban with Notes & Sorting
+// Board - Kanban (No Sort, drag only)
 
 let columns = [];
-let cardsData = {}; // Per tracciare metadati (createDate, modifiedDate, notes)
+let cardsData = {};
 let currentProjectId = null;
-let sortMode = 'manual'; // manual, name-asc, name-desc, created-asc, created-desc, modified-asc, modified-desc
 
 function save() {
   localStorage.setItem('3lo_board_' + currentProjectId, JSON.stringify(columns));
@@ -12,19 +11,38 @@ function save() {
 
 function initCardData(cardId) {
   if (!cardsData[cardId]) {
-    cardsData[cardId] = {
-      created: Date.now(),
-      modified: Date.now(),
-      note: ''
-    };
+    cardsData[cardId] = { created: Date.now(), modified: Date.now(), note: '' };
   }
+}
+
+function openNote(cardId) {
+  initCardData(cardId);
+  const modal = document.createElement('div');
+  modal.className = 'card-note-modal active';
+  modal.innerHTML = `
+    <div class="card-note-content">
+      <div class="card-note-header">
+        <h3>Card Note</h3>
+        <button class="btn-secondary" onclick="this.closest('.card-note-modal').remove()">Close</button>
+      </div>
+      <textarea class="card-note-textarea" placeholder="Add notes...">${cardsData[cardId].note}</textarea>
+      <button class="btn-primary" id="save-note" style="margin-top: 1rem; float: right;">Save</button>
+    </div>
+  `;
+  modal.addEventListener('click', (e) => { if (e.target === modal) modal.remove(); });
+  modal.querySelector('#save-note').addEventListener('click', () => {
+    cardsData[cardId].note = modal.querySelector('.card-note-textarea').value;
+    cardsData[cardId].modified = Date.now();
+    save();
+    modal.remove();
+  });
+  document.body.appendChild(modal);
 }
 
 function createColumn(column) {
   const colEl = document.createElement('div');
   colEl.className = 'column';
   colEl.dataset.id = column.id;
-  
   colEl.innerHTML = `
     <div class="column-header">
       <div class="column-title" contenteditable="true">${column.title}</div>
@@ -48,7 +66,7 @@ function createColumn(column) {
   });
   
   colEl.querySelector('.add-card').addEventListener('click', () => {
-    addCardUI(colEl.querySelector('.cards'), column.id);
+    addCard(colEl.querySelector('.cards'), column.id);
   });
   
   const cardsContainer = colEl.querySelector('.cards');
@@ -61,9 +79,7 @@ function createColumn(column) {
       group: 'cards',
       animation: 150,
       ghostClass: 'sortable-ghost',
-      onEnd: () => {
-        updateCardOrder();
-      }
+      onEnd: updateCardOrder
     });
   }
   
@@ -75,14 +91,14 @@ function createCard(card) {
   const cardEl = document.createElement('div');
   cardEl.className = 'card';
   cardEl.dataset.id = card.id;
-  cardEl.innerHTML = `
-    <div class="card-text" contenteditable="true">${card.text}</div>
+  cardEl.innerHTML = card.text + `
     <div class="card-actions">
       <button class="card-note-btn">📝 Note</button>
     </div>
   `;
   
-  cardEl.querySelector('.card-text').addEventListener('blur', (e) => {
+  cardEl.querySelector('.card-text, div:not(.card-actions)').contentEditable = true;
+  cardEl.querySelector('.card-text, div:not(.card-actions)').addEventListener('blur', (e) => {
     card.text = e.target.textContent;
     cardsData[card.id].modified = Date.now();
     save();
@@ -90,74 +106,13 @@ function createCard(card) {
   
   cardEl.querySelector('.card-note-btn').addEventListener('click', (e) => {
     e.stopPropagation();
-    openNoteModal(card.id);
+    openNote(card.id);
   });
   
   return cardEl;
 }
 
-function openNoteModal(cardId) {
-  initCardData(cardId);
-  const modal = document.createElement('div');
-  modal.className = 'card-note-modal active';
-  modal.innerHTML = `
-    <div class="card-note-content">
-      <div class="card-note-header">
-        <h3>Card Note</h3>
-        <button class="btn-secondary" onclick="this.closest('.card-note-modal').remove()">Close</button>
-      </div>
-      <textarea class="card-note-textarea" placeholder="Add notes about this card...">${cardsData[cardId].note}</textarea>
-      <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 1rem;">
-        <span style="font-size: 0.8rem; color: rgba(255,255,255,0.5)">Created: ${new Date(cardsData[cardId].created).toLocaleString()}</span>
-        <button class="btn-primary" id="save-note">Save Note</button>
-      </div>
-    </div>
-  `;
-  
-  modal.addEventListener('click', (e) => {
-    if (e.target === modal) modal.remove();
-  });
-  
-  modal.querySelector('#save-note').addEventListener('click', () => {
-    cardsData[cardId].note = modal.querySelector('.card-note-textarea').value;
-    cardsData[cardId].modified = Date.now();
-    save();
-    modal.remove();
-  });
-  
-  document.body.appendChild(modal);
-}
-
-function sortCards(columnId, cards) {
-  if (sortMode === 'manual') return cards;
-  
-  const sorted = [...cards];
-  sorted.forEach(c => initCardData(c.id));
-  
-  switch(sortMode) {
-    case 'name-asc':
-      sorted.sort((a, b) => a.text.localeCompare(b.text));
-      break;
-    case 'name-desc':
-      sorted.sort((a, b) => b.text.localeCompare(a.text));
-      break;
-    case 'created-asc':
-      sorted.sort((a, b) => cardsData[a.id].created - cardsData[b.id].created);
-      break;
-    case 'created-desc':
-      sorted.sort((a, b) => cardsData[b.id].created - cardsData[a.id].created);
-      break;
-    case 'modified-asc':
-      sorted.sort((a, b) => cardsData[a.id].modified - cardsData[b.id].modified);
-      break;
-    case 'modified-desc':
-      sorted.sort((a, b) => cardsData[b.id].modified - cardsData[a.id].modified);
-      break;
-  }
-  return sorted;
-}
-
-function addCardUI(container, columnId) {
+function addCard(container, columnId) {
   const textarea = document.createElement('textarea');
   textarea.className = 'card-input';
   textarea.placeholder = 'Enter card text...';
@@ -192,10 +147,6 @@ function addCardUI(container, columnId) {
       const column = columns.find(c => c.id === columnId);
       column.cards.push(card);
       
-      if (sortMode !== 'manual') {
-        column.cards = sortCards(columnId, column.cards);
-      }
-      
       save();
       render();
     }
@@ -217,7 +168,7 @@ function updateCardOrder() {
     const cardEls = colEl.querySelectorAll('.card');
     column.cards = Array.from(cardEls).map(el => {
       const id = el.dataset.id;
-      const text = el.querySelector('.card-text').textContent;
+      const text = el.childNodes[0].textContent.trim();
       return { id, text };
     });
   });
@@ -232,7 +183,7 @@ function init() {
   }
   
   const projects = JSON.parse(localStorage.getItem('3lo_projects') || '[]');
-  const proj = projects.find(p => p.id === currentProjectId);
+  const proj = projects.find(p => String(p.id) === String(currentProjectId));
   if (proj) {
     document.getElementById('board-title').textContent = '🌙 ' + proj.name;
   }
@@ -244,11 +195,7 @@ function init() {
   ]));
   
   cardsData = JSON.parse(localStorage.getItem('3lo_cards_data_' + currentProjectId) || '{}');
-  
-  // Inizializza dati per card esistenti
-  columns.forEach(col => {
-    col.cards.forEach(card => initCardData(card.id));
-  });
+  columns.forEach(col => col.cards.forEach(c => initCardData(c.id)));
   
   render();
 }
@@ -257,33 +204,7 @@ function render() {
   const board = document.getElementById('board');
   board.innerHTML = '';
   
-  // Sort controls
-  const sortDiv = document.createElement('div');
-  sortDiv.className = 'note-sort-controls';
-  sortDiv.innerHTML = `
-    <label>Sort by:</label>
-    <select id="sort-select">
-      <option value="manual">Manual (drag)</option>
-      <option value="name-asc">Name ↑</option>
-      <option value="name-desc">Name ↓</option>
-      <option value="created-asc">Created ↑</option>
-      <option value="created-desc">Created ↓</option>
-      <option value="modified-asc">Modified ↑</option>
-      <option value="modified-desc">Modified ↓</option>
-    </select>
-  `;
-  board.appendChild(sortDiv);
-  
-  sortDiv.querySelector('#sort-select').addEventListener('change', (e) => {
-    sortMode = e.target.value;
-    render();
-  });
-  
   columns.forEach(column => {
-    // Sort cards se non in modalità manuale
-    if (sortMode !== 'manual') {
-      column.cards = sortCards(column.id, column.cards);
-    }
     board.appendChild(createColumn(column));
   });
   
@@ -296,9 +217,8 @@ function render() {
         const newOrder = [];
         document.querySelectorAll('.column').forEach(el => {
           const colId = el.dataset.id;
-          if (colId) {
-            newOrder.push(columns.find(c => c.id === colId));
-          }
+          const col = columns.find(c => c.id === colId);
+          if (col) newOrder.push(col);
         });
         columns = newOrder;
         save();
@@ -315,8 +235,7 @@ document.getElementById('add-list').addEventListener('click', () => {
   const title = prompt('List name:');
   if (title) {
     const colId = Date.now().toString();
-    const column = { id: colId, title, cards: [] };
-    columns.push(column);
+    columns.push({ id: colId, title, cards: [] });
     render();
     save();
   }
