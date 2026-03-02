@@ -1,69 +1,17 @@
-// Board Page - Kanban with SQLite
+// Board Page - Kanban with localStorage
 
 let columns = [];
+let cardCounter = parseInt(localStorage.getItem('3lo_card_counter')) || 2;
+let colCounter = parseInt(localStorage.getItem('3lo_col_counter')) || 4;
 let currentProjectId = null;
 
-async function init() {
-  await initDB();
-  currentProjectId = localStorage.getItem('3lo_current_project');
-  
-  if (!currentProjectId) {
-    window.location.href = './index.html';
-    return;
-  }
-  
-  const projects = await getAllProjects();
-  const proj = projects.find(p => p.id === currentProjectId);
-  if (proj) {
-    document.getElementById('board-title').textContent = '🌙 ' + proj.name;
-  }
-  
-  await loadBoard();
+function save() {
+  localStorage.setItem('3lo_board_' + currentProjectId, JSON.stringify(columns));
+  localStorage.setItem('3lo_card_counter', cardCounter);
+  localStorage.setItem('3lo_col_counter', colCounter);
 }
 
-async function loadBoard() {
-  columns = await getBoard(currentProjectId);
-  
-  // Se board vuota, crea colonne default
-  if (columns.length === 0) {
-    await createColumn(currentProjectId, 'To Do', 0);
-    await createColumn(currentProjectId, 'In Progress', 1);
-    await createColumn(currentProjectId, 'Done', 2);
-    columns = await getBoard(currentProjectId);
-  }
-  
-  render();
-}
-
-function render() {
-  const board = document.getElementById('board');
-  board.innerHTML = '';
-  
-  columns.forEach(column => {
-    board.appendChild(createColumnEl(column));
-  });
-  
-  if (typeof Sortable !== 'undefined') {
-    new Sortable(board, {
-      animation: 150,
-      handle: '.column-header',
-      ghostClass: 'sortable-ghost',
-      onEnd: async () => {
-        const newOrder = [];
-        document.querySelectorAll('.column').forEach((el, idx) => {
-          const colId = el.dataset.id;
-          newOrder.push({ id: colId, position: idx });
-        });
-        for (const item of newOrder) {
-          await updateColumnPosition(item.id, item.position);
-        }
-        await loadBoard();
-      }
-    });
-  }
-}
-
-function createColumnEl(column) {
+function createColumn(column) {
   const colEl = document.createElement('div');
   colEl.className = 'column';
   colEl.dataset.id = column.id;
@@ -77,14 +25,16 @@ function createColumnEl(column) {
     <button class="add-card">+ Add Card</button>
   `;
   
-  colEl.querySelector('.column-title').addEventListener('blur', async (e) => {
-    await updateColumnTitle(column.id, e.target.textContent);
+  colEl.querySelector('.column-title').addEventListener('blur', (e) => {
+    column.title = e.target.textContent;
+    save();
   });
   
-  colEl.querySelector('.column-delete').addEventListener('click', async () => {
+  colEl.querySelector('.column-delete').addEventListener('click', () => {
     if (confirm('Delete this list?')) {
-      await deleteColumn(column.id);
-      await loadBoard();
+      columns = columns.filter(c => c.id !== column.id);
+      colEl.remove();
+      save();
     }
   });
   
@@ -93,8 +43,8 @@ function createColumnEl(column) {
   });
   
   const cardsContainer = colEl.querySelector('.cards');
-  (column.cards || []).forEach(card => {
-    cardsContainer.appendChild(createCardEl(card));
+  column.cards.forEach(card => {
+    cardsContainer.appendChild(createCard(card));
   });
   
   if (typeof Sortable !== 'undefined') {
@@ -102,8 +52,8 @@ function createColumnEl(column) {
       group: 'cards',
       animation: 150,
       ghostClass: 'sortable-ghost',
-      onEnd: async () => {
-        await updateCardPositions();
+      onEnd: () => {
+        updateCardOrder();
       }
     });
   }
@@ -111,29 +61,18 @@ function createColumnEl(column) {
   return colEl;
 }
 
-function createCardEl(card) {
+function createCard(card) {
   const cardEl = document.createElement('div');
   cardEl.className = 'card';
   cardEl.dataset.id = card.id;
   cardEl.innerHTML = `<div class="card-text" contenteditable="true">${card.text}</div>`;
   
-  cardEl.querySelector('.card-text').addEventListener('blur', async (e) => {
-    await updateCardText(card.id, e.target.textContent);
+  cardEl.querySelector('.card-text').addEventListener('blur', (e) => {
+    card.text = e.target.textContent;
+    save();
   });
   
   return cardEl;
-}
-
-async function updateCardPositions() {
-  const colElements = document.querySelectorAll('.column');
-  for (const colEl of colElements) {
-    const colId = colEl.dataset.id;
-    const cardEls = colEl.querySelectorAll('.card');
-    for (let i = 0; i < cardEls.length; i++) {
-      const cardId = cardEls[i].dataset.id;
-      await updateCardPosition(cardId, colId, i);
-    }
-  }
 }
 
 function addCardUI(container, columnId) {
@@ -160,11 +99,14 @@ function addCardUI(container, columnId) {
   container.parentElement.appendChild(wrapper);
   textarea.focus();
   
-  addBtn.addEventListener('click', async () => {
+  addBtn.addEventListener('click', () => {
     if (textarea.value.trim()) {
-      const cards = container.querySelectorAll('.card');
-      await createCard(columnId, textarea.value.trim(), cards.length);
-      await loadBoard();
+      const cardId = Date.now().toString();
+      const card = { id: cardId, text: textarea.value.trim() };
+      const column = columns.find(c => c.id === columnId);
+      column.cards.push(card);
+      container.appendChild(createCard(card));
+      save();
     }
     wrapper.remove();
     btn.style.display = 'block';
@@ -176,17 +118,75 @@ function addCardUI(container, columnId) {
   });
 }
 
-document.getElementById('back').addEventListener('click', () => {
-  window.location.href = './index.html';
-});
+function updateCardOrder() {
+  const colElements = document.querySelectorAll('.column');
+  colElements.forEach(colEl => {
+    const colId = colEl.dataset.id;
+    const column = columns.find(c => c.id === colId);
+    const cardEls = colEl.querySelectorAll('.card');
+    column.cards = Array.from(cardEls).map(el => ({
+      id: el.dataset.id,
+      text: el.querySelector('.card-text').textContent
+    }));
+  });
+  save();
+}
 
-document.getElementById('add-list').addEventListener('click', async () => {
-  const title = prompt('List name:');
-  if (title) {
-    const position = columns.length;
-    await createColumn(currentProjectId, title, position);
-    await loadBoard();
+function init() {
+  currentProjectId = localStorage.getItem('3lo_current_project');
+  if (!currentProjectId) {
+    window.location.href = './index.html';
+    return;
   }
-});
+  
+  const projects = JSON.parse(localStorage.getItem('3lo_projects') || '[]');
+  const proj = projects.find(p => p.id === currentProjectId);
+  if (proj) {
+    document.getElementById('board-title').textContent = '🌙 ' + proj.name;
+  }
+  
+  columns = JSON.parse(localStorage.getItem('3lo_board_' + currentProjectId) || JSON.stringify([
+    { id: '1', title: 'To Do', cards: [{ id: '1', text: 'First task' }] },
+    { id: '2', title: 'In Progress', cards: [] },
+    { id: '3', title: 'Done', cards: [] }
+  ]));
+  
+  const board = document.getElementById('board');
+  board.innerHTML = '';
+  columns.forEach(column => {
+    board.appendChild(createColumn(column));
+  });
+  
+  if (typeof Sortable !== 'undefined') {
+    new Sortable(board, {
+      animation: 150,
+      handle: '.column-header',
+      ghostClass: 'sortable-ghost',
+      onEnd: () => {
+        const newOrder = [];
+        document.querySelectorAll('.column').forEach(el => {
+          newOrder.push(columns.find(c => c.id === el.dataset.id));
+        });
+        columns = newOrder;
+        save();
+      }
+    });
+  }
+  
+  document.getElementById('back').addEventListener('click', () => {
+    window.location.href = './index.html';
+  });
+  
+  document.getElementById('add-list').addEventListener('click', () => {
+    const title = prompt('List name:');
+    if (title) {
+      const colId = Date.now().toString();
+      const column = { id: colId, title, cards: [] };
+      columns.push(column);
+      board.appendChild(createColumn(column));
+      save();
+    }
+  });
+}
 
 init();
