@@ -22,7 +22,6 @@ body {
   border-bottom: 1px solid rgba(255, 255, 255, 0.1);
 }
 
-/* Logo Styles */
 .logo-container {
   display: flex;
   align-items: center;
@@ -74,51 +73,102 @@ body {
   cursor: pointer;
 }
 
-/* Projects Home */
+/* Projects - Lista Compatta */
 .projects-container {
   flex: 1;
-  padding: 2rem;
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
-  gap: 1.5rem;
-  overflow-y: auto;
-}
-
-.project-card {
-  background: rgba(255, 255, 255, 0.05);
-  border-radius: 12px;
   padding: 1.5rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  max-width: 900px;
+  margin: 0 auto;
+  width: 100%;
+}
+
+.project-item {
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 8px;
+  padding: 1rem 1.25rem;
+  display: flex;
+  align-items: center;
+  gap: 1rem;
   border: 1px solid rgba(255, 255, 255, 0.1);
+  transition: background 0.2s, transform 0.2s;
 }
 
-.project-card h3 {
+.project-item:hover {
+  background: rgba(255, 255, 255, 0.08);
+  transform: translateX(4px);
+}
+
+.project-icon {
+  width: 40px;
+  height: 40px;
+  background: linear-gradient(135deg, #6366f1 0%, #818cf8 100%);
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   font-size: 1.2rem;
-  margin-bottom: 0.5rem;
+  flex-shrink: 0;
 }
 
-.project-card p {
-  color: rgba(255, 255, 255, 0.6);
-  font-size: 0.9rem;
-  margin-bottom: 1rem;
+.project-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.project-title {
+  font-size: 1rem;
+  font-weight: 600;
+  margin-bottom: 0.25rem;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.project-meta {
+  font-size: 0.8rem;
+  color: rgba(255, 255, 255, 0.5);
 }
 
 .project-actions {
   display: flex;
   gap: 0.5rem;
+  flex-shrink: 0;
 }
 
 .project-actions button {
-  flex: 1;
-  padding: 0.5rem;
+  padding: 0.4rem 0.8rem;
   border: none;
   border-radius: 6px;
   cursor: pointer;
-  font-size: 0.85rem;
+  font-size: 0.8rem;
+  transition: opacity 0.2s;
 }
 
-.btn-open { background: #6366f1; color: white; }
-.btn-export { background: rgba(255, 255, 255, 0.1); color: white; }
-.btn-delete { background: #ef4444; color: white; }
+.project-actions button:hover {
+  opacity: 0.8;
+}
+
+.btn-open {
+  background: #6366f1;
+  color: white;
+}
+
+.btn-export {
+  background: rgba(255, 255, 255, 0.1);
+  color: white;
+}
+
+.btn-delete {
+  background: rgba(239, 68, 68, 0.2);
+  color: #ef4444;
+}
+
+.btn-delete:hover {
+  background: rgba(239, 68, 68, 0.3);
+}
 
 /* Board */
 .board {
@@ -153,7 +203,9 @@ body {
   cursor: text;
 }
 
-.column-title:hover { background: rgba(255, 255, 255, 0.1); }
+.column-title:hover {
+  background: rgba(255, 255, 255, 0.1);
+}
 
 .column-delete {
   background: none;
@@ -164,7 +216,9 @@ body {
   opacity: 0.6;
 }
 
-.column-delete:hover { opacity: 1; }
+.column-delete:hover {
+  opacity: 1;
+}
 
 .cards {
   min-height: 100px;
@@ -217,4 +271,17 @@ body {
 .sortable-ghost {
   opacity: 0.3;
   background: #6366f1;
+}
+
+/* Empty State */
+.empty-state {
+  text-align: center;
+  padding: 4rem 2rem;
+  color: rgba(255, 255, 255, 0.4);
+}
+
+.empty-state-icon {
+  font-size: 4rem;
+  margin-bottom: 1rem;
+  opacity: 0.5;
 }
