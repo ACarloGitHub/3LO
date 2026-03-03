@@ -175,11 +175,26 @@ function render() {
       const proj = projects.find(p => String(p.id) === String(id));
       if (!proj) return;
       const board = JSON.parse(localStorage.getItem('3lo_board_' + id) || '[]');
-      const blob = new Blob([JSON.stringify({project: proj, board, metadata: projectsData[id]}, null, 2)], {type: 'application/json'});
+      const cards = JSON.parse(localStorage.getItem('3lo_cards_data_' + id) || '{}');
+      const exportData = {
+        version: '1.0',
+        project: proj,
+        board: board,
+        cards: cards,
+        metadata: projectsData[id],
+        exportedAt: new Date().toISOString()
+      };
+      const blob = new Blob([JSON.stringify(exportData, null, 2)], {type: 'application/json'});
+      const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
-      a.href = URL.createObjectURL(blob);
-      a.download = `${proj.name}.json`;
+      a.href = url;
+      a.download = `${proj.name.replace(/[^a-z0-9]/gi, '_').toLowerCase()}_3lo.json`;
+      document.body.appendChild(a);
       a.click();
+      setTimeout(() => {
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+      }, 100);
     });
   });
   
@@ -221,6 +236,65 @@ document.getElementById('new-project').addEventListener('click', () => {
     render();
   }
 });
+
+// Import project
+const importBtn = document.getElementById('import-project');
+const importInput = document.getElementById('import-file');
+
+if (importBtn && importInput) {
+  importBtn.addEventListener('click', () => importInput.click());
+  
+  importInput.addEventListener('change', (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      try {
+        const data = JSON.parse(event.target.result);
+        
+        // Validazione base
+        if (!data.project || !data.project.name) {
+          alert('File JSON non valido: manca project.name');
+          return;
+        }
+        
+        // Crea nuovo progetto con ID fresh (non sovrascrive esistente)
+        const newId = Date.now().toString();
+        const importedProj = {
+          id: newId,
+          name: data.project.name + ' (imported)',
+          created: Date.now()
+        };
+        
+        projects.push(importedProj);
+        
+        // Copia dati con nuovo ID
+        if (data.board) {
+          localStorage.setItem('3lo_board_' + newId, JSON.stringify(data.board));
+        }
+        if (data.cards) {
+          localStorage.setItem('3lo_cards_data_' + newId, JSON.stringify(data.cards));
+        }
+        
+        // Metadati
+        initProjectData(newId);
+        if (data.metadata) {
+          projectsData[newId] = { ...projectsData[newId], ...data.metadata, importedAt: Date.now() };
+        }
+        
+        save();
+        render();
+        alert(`Progetto "${importedProj.name}" importato con successo!`);
+        
+      } catch (err) {
+        alert('Errore durante l\'import: ' + err.message);
+      }
+      importInput.value = ''; // Reset per permettere re-import
+    };
+    reader.readAsText(file);
+  });
+}
 
 projects.forEach(p => initProjectData(p.id));
 render();
