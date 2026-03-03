@@ -354,3 +354,70 @@ body {
   opacity: 0.3;
   background: #6366f1;
 }
+
+/* Card text editable */
+.card-text {
+  outline: none;
+  min-height: 1.2em;
+}
+
+.card-text:hover {
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 4px;
+}
+
+.card-text:focus {
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 4px;
+}
+
+/* Board title editable */
+.board-title-container {
+  flex: 1;
+  text-align: center;
+}
+
+#board-title {
+  display: inline-block;
+  padding: 0.25rem 0.75rem;
+  border-radius: 8px;
+  cursor: text;
+  outline: none;
+  font-size: 1.3rem;
+  font-weight: 600;
+}
+
+#board-title:hover {
+  background: rgba(255, 255, 255, 0.1);
+}
+
+#board-title:focus {
+  background: rgba(255, 255, 255, 0.15);
+  box-shadow: 0 0 0 2px rgba(99, 102, 241, 0.5);
+}
+
+/* Fix select dropdown colors for browser */
+.home-sort-controls select {
+  background: rgba(30, 30, 50, 0.95);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  color: #fff;
+  padding: 0.4rem 0.8rem;
+  border-radius: 6px;
+  font-size: 0.9rem;
+  cursor: pointer;
+}
+
+.home-sort-controls select option {
+  background: #1e1e32;
+  color: #fff;
+}
+
+.home-sort-controls select option:hover,
+.home-sort-controls select option:checked {
+  background: #6366f1;
+}
+
+/* Force dark color-scheme for selects */
+.home-sort-controls select {
+  color-scheme: dark;
+}

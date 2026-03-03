@@ -159,6 +159,9 @@ function render() {
       if (confirm('Delete?')) {
         projects = projects.filter(p => String(p.id) !== String(id));
         delete projectsData[id];
+        // Pulizia dati orfani del progetto cancellato
+        localStorage.removeItem('3lo_board_' + id);
+        localStorage.removeItem('3lo_cards_data_' + id);
         save();
         render();
       }
@@ -221,3 +224,13 @@ document.getElementById('new-project').addEventListener('click', () => {
 
 projects.forEach(p => initProjectData(p.id));
 render();
+
+// Salva immediatamente su evento beforeunload (per chiusura finestra Ctrl+Q o X)
+window.addEventListener('beforeunload', () => {
+  save();
+});
+
+// Per Tauri: gestione chiusura finestra
+if (window.__TAURI__) {
+  window.addEventListener('blur', save); // Salva quando perde focus
+}

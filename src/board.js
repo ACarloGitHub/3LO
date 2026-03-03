@@ -91,15 +91,16 @@ function createCard(card) {
   const cardEl = document.createElement('div');
   cardEl.className = 'card';
   cardEl.dataset.id = card.id;
-  cardEl.innerHTML = card.text + `
+  cardEl.innerHTML = `
+    <div class="card-text" contenteditable="true">${card.text}</div>
     <div class="card-actions">
       <button class="card-note-btn">📝 Note</button>
     </div>
   `;
   
-  cardEl.querySelector('.card-text, div:not(.card-actions)').contentEditable = true;
-  cardEl.querySelector('.card-text, div:not(.card-actions)').addEventListener('blur', (e) => {
-    card.text = e.target.textContent;
+  const textEl = cardEl.querySelector('.card-text');
+  textEl.addEventListener('blur', () => {
+    card.text = textEl.textContent.trim();
     cardsData[card.id].modified = Date.now();
     save();
   });
@@ -168,7 +169,8 @@ function updateCardOrder() {
     const cardEls = colEl.querySelectorAll('.card');
     column.cards = Array.from(cardEls).map(el => {
       const id = el.dataset.id;
-      const text = el.childNodes[0].textContent.trim();
+      const textEl = el.querySelector('.card-text');
+      const text = textEl ? textEl.textContent.trim() : '';
       return { id, text };
     });
   });
@@ -185,14 +187,29 @@ function init() {
   const projects = JSON.parse(localStorage.getItem('3lo_projects') || '[]');
   const proj = projects.find(p => String(p.id) === String(currentProjectId));
   if (proj) {
-    document.getElementById('board-title').textContent = '🌙 ' + proj.name;
+    const titleEl = document.getElementById('board-title');
+    titleEl.textContent = '🌙 ' + proj.name;
+    
+    // Aggiungi listener per edit titolo
+    titleEl.addEventListener('blur', () => {
+      const newName = titleEl.textContent.replace(/^🌙\s*/, '').trim();
+      if (newName && newName !== proj.name) {
+        proj.name = newName;
+        localStorage.setItem('3lo_projects', JSON.stringify(projects));
+        save();
+      }
+    });
+    
+    // Salva su Enter
+    titleEl.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') {
+        e.preventDefault();
+        titleEl.blur();
+      }
+    });
   }
   
-  columns = JSON.parse(localStorage.getItem('3lo_board_' + currentProjectId) || JSON.stringify([
-    { id: '1', title: 'To Do', cards: [{ id: '1', text: 'First task' }] },
-    { id: '2', title: 'In Progress', cards: [] },
-    { id: '3', title: 'Done', cards: [] }
-  ]));
+  columns = JSON.parse(localStorage.getItem('3lo_board_' + currentProjectId) || '[]');
   
   cardsData = JSON.parse(localStorage.getItem('3lo_cards_data_' + currentProjectId) || '{}');
   columns.forEach(col => col.cards.forEach(c => initCardData(c.id)));
@@ -230,6 +247,16 @@ function render() {
 document.getElementById('back').addEventListener('click', () => {
   window.location.href = './index.html';
 });
+
+// Salva immediatamente su evento beforeunload (per chiusura finestra Ctrl+Q o X)
+window.addEventListener('beforeunload', () => {
+  save();
+});
+
+// Per Tauri: gestione chiusura finestra
+if (window.__TAURI__) {
+  window.addEventListener('blur', save); // Salva quando perde focus
+}
 
 document.getElementById('add-list').addEventListener('click', () => {
   const title = prompt('List name:');
