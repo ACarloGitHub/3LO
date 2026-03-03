@@ -6,7 +6,6 @@
   "permissions": [
     "core:default",
     "sql:default",
-    "dialog:default",
-    "fs:default"
+    "dialog:default"
   ]
 }
