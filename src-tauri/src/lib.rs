@@ -1,4 +1,5 @@
 // Tauri commands for 3LO export functionality
+use std::sync::mpsc;
 use tauri_plugin_dialog::DialogExt;
 
 #[tauri::command]
@@ -7,24 +8,29 @@ async fn export_json_file(
     data: String,
     default_filename: String,
 ) -> Result<String, String> {
-    // Open save dialog
-    let path = window.dialog()
+    // Create channel to get result from callback
+    let (tx, rx) = mpsc::channel();
+    
+    // Open save dialog with callback
+    window.dialog()
         .file()
         .add_filter("JSON", &["json"])
         .set_file_name(&default_filename)
-        .save_file()
-        .await;
+        .save_file(move |file_path| {
+            let _ = tx.send(file_path);
+        });
     
-    match path {
-        Some(file_path) => {
-            // Write file using std::fs
+    // Wait for result
+    match rx.recv() {
+        Ok(Some(file_path)) => {
             let path_str = file_path.to_string();
             match std::fs::write(&path_str, data) {
                 Ok(_) => Ok(path_str),
                 Err(e) => Err(format!("Failed to write file: {}", e)),
             }
         }
-        None => Err("User cancelled".to_string()),
+        Ok(None) => Err("User cancelled".to_string()),
+        Err(e) => Err(format!("Dialog error: {}", e)),
     }
 }
 
