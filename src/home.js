@@ -169,7 +169,7 @@ function render() {
   });
   
   document.querySelectorAll('.btn-export').forEach(btn => {
-    btn.addEventListener('click', (e) => {
+    btn.addEventListener('click', async (e) => {
       e.stopPropagation();
       const id = e.target.dataset.id;
       const proj = projects.find(p => String(p.id) === String(id));
@@ -189,7 +189,25 @@ function render() {
       const jsonStr = JSON.stringify(exportData, null, 2);
       const filename = `${proj.name.replace(/[^a-z0-9]/gi, '_').toLowerCase()}_3lo.json`;
       
-      // Modal con testo selezionabile (funziona in Tauri)
+      // Check if Tauri is available
+      if (typeof window.__TAURI__ !== 'undefined' && window.__TAURI__.core?.invoke) {
+        try {
+          const result = await window.__TAURI__.core.invoke('export_json_file', {
+            data: jsonStr,
+            defaultFilename: filename
+          });
+          alert(`✅ Salvato in:\n${result}`);
+          return;
+        } catch (err) {
+          if (err !== 'User cancelled') {
+            console.error('Export error:', err);
+            alert(`Errore durante il salvataggio: ${err}`);
+          }
+          return;
+        }
+      }
+      
+      // Fallback: browser - use clipboard modal
       const modal = document.createElement('div');
       modal.className = 'card-note-modal active';
       modal.innerHTML = `
@@ -200,7 +218,7 @@ function render() {
           </div>
           <p style="margin-bottom: 0.5rem; font-size: 0.85rem; opacity: 0.7;">
             File: <b>${filename}</b><br>
-            Copia il JSON qui sotto e salvalo manualmente, o usa "Copy JSON"
+            (Nel browser: copia il JSON e salvalo manualmente)
           </p>
           <textarea class="card-note-textarea" style="min-height: 200px; font-family: monospace; font-size: 0.75rem;" readonly>${jsonStr}</textarea>
           <div style="display: flex; gap: 0.5rem; margin-top: 1rem; justify-content: flex-end;">
