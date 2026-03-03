@@ -28,9 +28,6 @@
       "preload": ["sqlite:3lo.db"]
     }
   },
-  "capabilities": [
-    "default"
-  ],
   "bundle": {
     "active": true,
     "targets": "all",
