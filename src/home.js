@@ -1,5 +1,30 @@
 // Home - Projects Management with Sorting
 
+// Dynamic import for Tauri v2 plugins (works in both browser and Tauri)
+let tauriSave = null;
+let tauriWriteFile = null;
+
+// Try to load Tauri v2 plugins
+if (window.__TAURI__) {
+  try {
+    // Dynamic import of plugins
+    const loadPlugins = async () => {
+      try {
+        const dialogMod = await import('@tauri-apps/plugin-dialog');
+        const fsMod = await import('@tauri-apps/plugin-fs');
+        tauriSave = dialogMod.save;
+        tauriWriteFile = fsMod.writeTextFile;
+        console.log('Tauri v2 plugins loaded');
+      } catch (err) {
+        console.log('Plugin import failed, using fallback:', err);
+      }
+    };
+    loadPlugins();
+  } catch (err) {
+    console.log('Tauri plugin loading failed:', err);
+  }
+}
+
 let projects = JSON.parse(localStorage.getItem('3lo_projects')) || [];
 let projectsData = JSON.parse(localStorage.getItem('3lo_projects_data')) || {};
 let sortMode = localStorage.getItem('3lo_home_sort') || 'custom';
@@ -189,17 +214,17 @@ function render() {
       const jsonStr = JSON.stringify(exportData, null, 2);
       const filename = `${proj.name.replace(/[^a-z0-9]/gi, '_').toLowerCase()}_3lo.json`;
       
-      // Tenta Save As nativo con Tauri dialog
-      if (window.__TAURI__) {
+      // Tenta Save As nativo con Tauri v2 plugins
+      if (tauriSave && tauriWriteFile) {
         try {
-          const filePath = await window.__TAURI__.dialog.save({
+          const filePath = await tauriSave({
             title: 'Salva progetto come...',
             defaultPath: filename,
             filters: [{ name: 'JSON File', extensions: ['json'] }]
           });
           
           if (filePath) {
-            await window.__TAURI__.fs.writeTextFile(filePath, jsonStr);
+            await tauriWriteFile(filePath, jsonStr);
             alert('✅ Progetto esportato con successo!');
             return;
           }
