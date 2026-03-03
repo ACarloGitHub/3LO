@@ -23,6 +23,11 @@
       "csp": null
     }
   },
+  "plugins": {
+    "sql": {
+      "preload": ["sqlite:3lo.db"]
+    }
+  },
   "bundle": {
     "active": true,
     "targets": "all",

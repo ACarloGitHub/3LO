@@ -189,21 +189,24 @@ function render() {
       const jsonStr = JSON.stringify(exportData, null, 2);
       const filename = `${proj.name.replace(/[^a-z0-9]/gi, '_').toLowerCase()}_3lo.json`;
       
-      // Check if Tauri is available
-      if (typeof window.__TAURI__ !== 'undefined' && window.__TAURI__.invoke) {
+      // Try Tauri native dialog
+      if (window.__TAURI__ && window.__TAURI__.dialog) {
         try {
-          const result = await window.__TAURI__.invoke('export_json_file', {
-            data: jsonStr,
-            defaultFilename: filename
+          const { save } = window.__TAURI__.dialog;
+          const selected = await save({
+            filters: [{ name: 'JSON', extensions: ['json'] }],
+            defaultPath: filename
           });
-          alert(`✅ Salvato in:\n${result}`);
-          return;
-        } catch (err) {
-          if (err && !err.toString().includes('cancelled')) {
-            console.error('Export error:', err);
-          } else {
-            return; // User ha annullato
+          if (selected) {
+            // Write file using Tauri fs
+            if (window.__TAURI__.fs && window.__TAURI__.fs.writeTextFile) {
+              await window.__TAURI__.fs.writeTextFile(selected, jsonStr);
+              alert(`✅ Salvato in:\n${selected}`);
+              return;
+            }
           }
+        } catch (err) {
+          console.log('Tauri save not available:', err);
         }
       }
       
