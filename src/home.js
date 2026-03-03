@@ -16,21 +16,11 @@ function initProjectData(projId) {
   }
 }
 
-function formatDate(ts) {
-  if (!ts || ts === 'Invalid Date' || isNaN(ts)) return 'Unknown';
-  try {
-    const date = new Date(Number(ts));
-    if (isNaN(date.getTime())) return 'Unknown';
-    return date.toLocaleDateString();
-  } catch (e) {
-    return 'Unknown';
-  }
-}
-
 function render() {
   const container = document.getElementById('projects');
   container.innerHTML = '';
   
+  // Sort controls
   const sortDiv = document.createElement('div');
   sortDiv.className = 'home-sort-controls';
   sortDiv.style.cssText = 'grid-column: 1 / -1;';
@@ -65,7 +55,6 @@ function render() {
     card.innerHTML = `
       <div class="project-icon">🌙</div>
       <div class="project-title">${proj.name}</div>
-      <div class="project-meta">${formatDate(projectsData[proj.id].created)}</div>
       <div class="project-actions">
         <button class="btn-open" data-id="${proj.id}">Open</button>
         <button class="btn-export" data-id="${proj.id}">Exp</button>
@@ -75,6 +64,7 @@ function render() {
     container.appendChild(card);
   });
   
+  // Open
   document.querySelectorAll('.btn-open').forEach(btn => {
     btn.addEventListener('click', (e) => {
       e.stopPropagation();
@@ -83,6 +73,7 @@ function render() {
     });
   });
   
+  // Export con Tauri v1 Save As
   document.querySelectorAll('.btn-export').forEach(btn => {
     btn.addEventListener('click', async (e) => {
       e.stopPropagation();
@@ -97,7 +88,6 @@ function render() {
         project: proj,
         board: board,
         cards: cards,
-        metadata: projectsData[id],
         exportedAt: new Date().toISOString(),
         _ai_prompt: 'Questa è una board 3LO. Ogni card ha: id, text, e dati in cards con note e date.'
       };
@@ -105,7 +95,26 @@ function render() {
       const jsonStr = JSON.stringify(exportData, null, 2);
       const filename = `${proj.name.replace(/[^a-z0-9]/gi, '_').toLowerCase()}_3lo.json`;
       
-      // Fallback: clipboard modal (funziona sempre)
+      // Tauri v1 Save As
+      if (window.__TAURI__ && window.__TAURI__.dialog) {
+        try {
+          const filePath = await window.__TAURI__.dialog.save({
+            title: 'Salva progetto come...',
+            defaultPath: filename,
+            filters: [{ name: 'JSON', extensions: ['json'] }]
+          });
+          
+          if (filePath) {
+            await window.__TAURI__.fs.writeFile({ path: filePath, contents: jsonStr });
+            alert('✅ Progetto esportato con successo!');
+            return;
+          }
+        } catch (err) {
+          console.error('Tauri v1 export error:', err);
+        }
+      }
+      
+      // Fallback clipboard
       const modal = document.createElement('div');
       modal.className = 'card-note-modal active';
       modal.innerHTML = `
@@ -114,11 +123,7 @@ function render() {
             <h3>📤 Export: ${proj.name}</h3>
             <button class="btn-secondary" onclick="this.closest('.card-note-modal').remove()">Close</button>
           </div>
-          <p style="margin-bottom: 0.5rem; font-size: 0.85rem; opacity: 0.7;">
-            File: <b>${filename}</b><br>
-            (Copia il JSON e salvalo manualmente)
-          </p>
-          <textarea class="card-note-textarea" style="min-height: 200px; font-family: monospace; font-size: 0.75rem;" readonly>${jsonStr.replace(/</g, '&lt;').replace(/>/g, '&gt;')}</textarea>
+          <textarea class="card-note-textarea" style="min-height: 200px; font-family: monospace;" readonly>${jsonStr}</textarea>
           <div style="display: flex; gap: 0.5rem; margin-top: 1rem; justify-content: flex-end;">
             <button class="btn-secondary" id="export-copy">📋 Copy JSON</button>
             <button class="btn-primary" onclick="this.closest('.card-note-modal').remove()">Done</button>
@@ -127,16 +132,14 @@ function render() {
       `;
       modal.querySelector('#export-copy').addEventListener('click', () => {
         navigator.clipboard.writeText(jsonStr).then(() => {
-          const btn = modal.querySelector('#export-copy');
-          btn.textContent = '✓ Copied!';
-          setTimeout(() => btn.textContent = '📋 Copy JSON', 2000);
+          modal.querySelector('#export-copy').textContent = '✓ Copied!';
         });
       });
-      modal.addEventListener('click', (ev) => { if (ev.target === modal) modal.remove(); });
       document.body.appendChild(modal);
     });
   });
   
+  // Delete
   document.querySelectorAll('.btn-delete').forEach(btn => {
     btn.addEventListener('click', (e) => {
       e.stopPropagation();
@@ -167,4 +170,4 @@ document.getElementById('new-project').addEventListener('click', () => {
 projects.forEach(p => initProjectData(p.id));
 render();
 
-console.log('Home loaded');
+console.log('Home loaded. Tauri available:', typeof window.__TAURI__);
