@@ -10,9 +10,11 @@ tauri-build = { version = "1.5", features = [] }
 
 [dependencies]
 tauri = { version = "1.6", features = ["api-all"] }
-tauri-plugin-sql = { git = "https://github.com/tauri-apps/tauri-plugin-sql", branch = "dev" }
+tauri-plugin-sql = { git = "https://github.com/tauri-apps/plugins-workspace", branch = "v1" }
 serde_json = "1.0"
 serde = { version = "1.0", features = ["derive"] }
+log = "0.4"
+tauri-plugin-log = "0.1"
 
 [features]
 default = ["custom-protocol"]

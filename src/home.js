@@ -1,5 +1,4 @@
-// Home - Projects Management with Sorting
-
+// Home - Projects Management
 let projects = JSON.parse(localStorage.getItem('3lo_projects')) || [];
 let projectsData = JSON.parse(localStorage.getItem('3lo_projects_data')) || {};
 let sortMode = localStorage.getItem('3lo_home_sort') || 'custom';
@@ -17,14 +16,23 @@ function initProjectData(projId) {
 }
 
 function formatDate(ts) {
-  if (!ts || ts === 'Invalid Date' || isNaN(ts)) return 'Unknown';
+  if (!ts) return 'Unknown';
   try {
     const date = new Date(Number(ts));
-    if (isNaN(date.getTime())) return 'Unknown';
-    return date.toLocaleDateString();
+    return isNaN(date.getTime()) ? 'Unknown' : date.toLocaleDateString();
   } catch (e) {
     return 'Unknown';
   }
+}
+
+function sortProjects(list) {
+  if (sortMode === 'custom') return list;
+  const sorted = [...list];
+  switch (sortMode) {
+    case 'name-asc': sorted.sort((a, b) => a.name.localeCompare(b.name)); break;
+    case 'name-desc': sorted.sort((a, b) => b.name.localeCompare(a.name)); break;
+  }
+  return sorted;
 }
 
 function render() {
@@ -33,33 +41,24 @@ function render() {
 
   const sortDiv = document.createElement('div');
   sortDiv.className = 'home-sort-controls';
-  sortDiv.style.cssText = 'grid-column: 1 / -1;';
   sortDiv.innerHTML = `
     <label>Sort:</label>
     <select id="home-sort-select">
-      <option value="custom">Custom (drag)</option>
+      <option value="custom">Custom</option>
       <option value="name-asc">Name ↑</option>
       <option value="name-desc">Name ↓</option>
-      <option value="created-asc">Created ↑</option>
-      <option value="created-desc">Created ↓</option>
     </select>
   `;
   container.appendChild(sortDiv);
 
-  sortDiv.querySelector('select').addEventListener('change', (e) => {
+  document.getElementById('home-sort-select').addEventListener('change', (e) => {
     sortMode = e.target.value;
     render();
     saveProjects();
   });
 
-  const sortedProjects = sortProjects([...projects]);
-
-  if (sortedProjects.length === 0) {
-    container.innerHTML += '<div class="empty-state" style="grid-column: 1 / -1; text-align: center; padding: 4rem; color: rgba(255,255,255,0.4);"><div style="font-size: 4rem; margin-bottom: 1rem;">📋</div><h3>No projects yet</h3><p>Create your first project</p></div>';
-    return;
-  }
-
-  sortedProjects.forEach(proj => {
+  const sorted = sortProjects(projects);
+  sorted.forEach(proj => {
     initProjectData(proj.id);
     const card = document.createElement('div');
     card.className = 'project-card';
@@ -80,16 +79,14 @@ function render() {
   // Open
   document.querySelectorAll('.btn-open').forEach(btn => {
     btn.addEventListener('click', (e) => {
-      e.stopPropagation();
       localStorage.setItem('3lo_current_project', e.target.dataset.id);
       window.location.href = './board.html';
     });
   });
 
-  // Export - DOWNLOAD NATIVO FUNZIONA OVUNQUE
+  // Export - Tauri v1 Save As
   document.querySelectorAll('.btn-export').forEach(btn => {
-    btn.addEventListener('click', (e) => {
-      e.stopPropagation();
+    btn.addEventListener('click', async (e) => {
       const id = e.target.dataset.id;
       const proj = projects.find(p => String(p.id) === String(id));
       if (!proj) return;
@@ -101,34 +98,45 @@ function render() {
         project: proj,
         board: board,
         cards: cards,
-        metadata: projectsData[id],
-        exportedAt: new Date().toISOString(),
-        _ai_prompt: 'Questa è una board 3LO. Ogni card ha: id, text, e dati in cards con note e date.'
+        exportedAt: new Date().toISOString()
       };
 
       const jsonStr = JSON.stringify(exportData, null, 2);
+      const filename = `${proj.name.replace(/[^a-z0-9]/gi, '_').toLowerCase()}_3lo.json`;
+
+      // Tauri v1 Save Dialog
+      if (window.__TAURI__ && window.__TAURI__.dialog) {
+        try {
+          const filePath = await window.__TAURI__.dialog.save({
+            title: 'Salva progetto',
+            defaultPath: filename,
+            filters: [{ name: 'JSON', extensions: ['json'] }]
+          });
+          
+          if (filePath) {
+            await window.__TAURI__.fs.writeTextFile(filePath, jsonStr);
+            alert('✅ Salvato!');
+            return;
+          }
+        } catch (err) {
+          console.error('Export error:', err);
+        }
+      }
+
+      // Fallback
       const blob = new Blob([jsonStr], { type: 'application/json' });
-      const url = URL.createObjectURL(blob);
-
-      // DOWNLOAD AUTOMATICO - funziona in browser e Tauri!
       const a = document.createElement('a');
-      a.href = url;
-      a.download = `${proj.name.replace(/[^a-z0-9]/gi, '_').toLowerCase()}_3lo.json`;
-      document.body.appendChild(a);
+      a.href = URL.createObjectURL(blob);
+      a.download = filename;
       a.click();
-      document.body.removeChild(a);
-      URL.revokeObjectURL(url);
-
-      console.log('Export downloaded:', a.download);
     });
   });
 
   // Delete
   document.querySelectorAll('.btn-delete').forEach(btn => {
     btn.addEventListener('click', (e) => {
-      e.stopPropagation();
       const id = e.target.dataset.id;
-      if (confirm('Delete this project?')) {
+      if (confirm('Delete?')) {
         projects = projects.filter(p => String(p.id) !== String(id));
         delete projectsData[id];
         localStorage.removeItem('3lo_board_' + id);
@@ -139,12 +147,11 @@ function render() {
     });
   });
 
-  // Drag & Drop solo in custom mode
+  // Drag
   if (sortMode === 'custom' && typeof Sortable !== 'undefined') {
     new Sortable(container, {
       animation: 150,
       handle: '.project-card',
-      ghostClass: 'sortable-ghost',
       onEnd: () => {
         const newOrder = [];
         document.querySelectorAll('.project-card').forEach(el => {
@@ -156,20 +163,6 @@ function render() {
       }
     });
   }
-}
-
-function sortProjects(projList) {
-  projList.forEach(p => initProjectData(p.id));
-  if (sortMode === 'custom') return projList;
-
-  const sorted = [...projList];
-  switch (sortMode) {
-    case 'name-asc': sorted.sort((a, b) => a.name.localeCompare(b.name)); break;
-    case 'name-desc': sorted.sort((a, b) => b.name.localeCompare(a.name)); break;
-    case 'created-asc': sorted.sort((a, b) => (projectsData[a.id]?.created || 0) - (projectsData[b.id]?.created || 0)); break;
-    case 'created-desc': sorted.sort((a, b) => (projectsData[b.id]?.created || 0) - (projectsData[a.id]?.created || 0)); break;
-  }
-  return sorted;
 }
 
 document.getElementById('new-project').addEventListener('click', () => {
@@ -185,5 +178,3 @@ document.getElementById('new-project').addEventListener('click', () => {
 
 projects.forEach(p => initProjectData(p.id));
 render();
-
-console.log('3LO Home loaded');
