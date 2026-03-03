@@ -182,19 +182,43 @@ function render() {
         board: board,
         cards: cards,
         metadata: projectsData[id],
-        exportedAt: new Date().toISOString()
+        exportedAt: new Date().toISOString(),
+        _ai_prompt: 'Questa è una board 3LO. Ogni card ha: id, text, e dati in cards{} con note e date.'
       };
-      const blob = new Blob([JSON.stringify(exportData, null, 2)], {type: 'application/json'});
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = `${proj.name.replace(/[^a-z0-9]/gi, '_').toLowerCase()}_3lo.json`;
-      document.body.appendChild(a);
-      a.click();
-      setTimeout(() => {
-        document.body.removeChild(a);
-        URL.revokeObjectURL(url);
-      }, 100);
+      
+      const jsonStr = JSON.stringify(exportData, null, 2);
+      const filename = `${proj.name.replace(/[^a-z0-9]/gi, '_').toLowerCase()}_3lo.json`;
+      
+      // Modal con testo selezionabile (funziona in Tauri)
+      const modal = document.createElement('div');
+      modal.className = 'card-note-modal active';
+      modal.innerHTML = `
+        <div class="card-note-content" style="max-width: 600px;">
+          <div class="card-note-header">
+            <h3>📤 Export: ${proj.name}</h3>
+            <button class="btn-secondary" onclick="this.closest('.card-note-modal').remove()">Close</button>
+          </div>
+          <p style="margin-bottom: 0.5rem; font-size: 0.85rem; opacity: 0.7;">
+            File: <b>${filename}</b><br>
+            Copia il JSON qui sotto e salvalo manualmente, o usa "Copy JSON"
+          </p>
+          <textarea class="card-note-textarea" style="min-height: 200px; font-family: monospace; font-size: 0.75rem;" readonly>${jsonStr}</textarea>
+          <div style="display: flex; gap: 0.5rem; margin-top: 1rem; justify-content: flex-end;">
+            <button class="btn-secondary" id="export-copy">📋 Copy JSON</button>
+            <button class="btn-primary" onclick="this.closest('.card-note-modal').remove()">Done</button>
+          </div>
+        </div>
+      `;
+      modal.querySelector('#export-copy').addEventListener('click', () => {
+        navigator.clipboard.writeText(jsonStr).then(() => {
+          const btn = modal.querySelector('#export-copy');
+          const orig = btn.textContent;
+          btn.textContent = '✓ Copied!';
+          setTimeout(() => btn.textContent = orig, 2000);
+        });
+      });
+      modal.addEventListener('click', (ev) => { if (ev.target === modal) modal.remove(); });
+      document.body.appendChild(modal);
     });
   });
   
