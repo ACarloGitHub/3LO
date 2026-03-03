@@ -189,26 +189,8 @@ function render() {
       const jsonStr = JSON.stringify(exportData, null, 2);
       const filename = `${proj.name.replace(/[^a-z0-9]/gi, '_').toLowerCase()}_3lo.json`;
       
-      // Try Tauri native dialog
-      if (window.__TAURI__ && window.__TAURI__.dialog) {
-        try {
-          const { save } = window.__TAURI__.dialog;
-          const selected = await save({
-            filters: [{ name: 'JSON', extensions: ['json'] }],
-            defaultPath: filename
-          });
-          if (selected) {
-            // Write file using Tauri fs
-            if (window.__TAURI__.fs && window.__TAURI__.fs.writeTextFile) {
-              await window.__TAURI__.fs.writeTextFile(selected, jsonStr);
-              alert(`✅ Salvato in:\n${selected}`);
-              return;
-            }
-          }
-        } catch (err) {
-          console.log('Tauri save not available:', err);
-        }
-      }
+      // TODO: Implementare "Save As" nativo con Tauri dialog
+      // Per ora: usa modal clipboard (funziona ovunque)
       
       // Fallback: browser - use clipboard modal
       const modal = document.createElement('div');
