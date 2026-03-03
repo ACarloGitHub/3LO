@@ -189,8 +189,24 @@ function render() {
       const jsonStr = JSON.stringify(exportData, null, 2);
       const filename = `${proj.name.replace(/[^a-z0-9]/gi, '_').toLowerCase()}_3lo.json`;
       
-      // TODO: Implementare "Save As" nativo con Tauri dialog
-      // Per ora: usa modal clipboard (funziona ovunque)
+      // Tenta Save As nativo con Tauri dialog
+      if (window.__TAURI__) {
+        try {
+          const filePath = await window.__TAURI__.dialog.save({
+            title: 'Salva progetto come...',
+            defaultPath: filename,
+            filters: [{ name: 'JSON File', extensions: ['json'] }]
+          });
+          
+          if (filePath) {
+            await window.__TAURI__.fs.writeTextFile(filePath, jsonStr);
+            alert('✅ Progetto esportato con successo!');
+            return;
+          }
+        } catch (err) {
+          console.error('Errore Tauri export:', err);
+        }
+      }
       
       // Fallback: browser - use clipboard modal
       const modal = document.createElement('div');
