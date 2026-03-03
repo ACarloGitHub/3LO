@@ -190,20 +190,20 @@ function render() {
       const filename = `${proj.name.replace(/[^a-z0-9]/gi, '_').toLowerCase()}_3lo.json`;
       
       // Check if Tauri is available
-      if (typeof window.__TAURI__ !== 'undefined' && window.__TAURI__.core?.invoke) {
+      if (typeof window.__TAURI__ !== 'undefined' && window.__TAURI__.invoke) {
         try {
-          const result = await window.__TAURI__.core.invoke('export_json_file', {
+          const result = await window.__TAURI__.invoke('export_json_file', {
             data: jsonStr,
             defaultFilename: filename
           });
           alert(`✅ Salvato in:\n${result}`);
           return;
         } catch (err) {
-          if (err !== 'User cancelled') {
+          if (err && !err.toString().includes('cancelled')) {
             console.error('Export error:', err);
-            alert(`Errore durante il salvataggio: ${err}`);
+          } else {
+            return; // User ha annullato
           }
-          return;
         }
       }
       
