@@ -1,8 +1,4 @@
 // Home - Projects Management with Sorting
-import { save } from '@tauri-apps/plugin-dialog';
-import { writeTextFile } from '@tauri-apps/plugin-fs';
-
-const IS_TAURI = typeof window !== 'undefined' && '__TAURI_INTERNALS__' in window;
 
 let projects = JSON.parse(localStorage.getItem('3lo_projects')) || [];
 let projectsData = JSON.parse(localStorage.getItem('3lo_projects_data')) || {};
@@ -22,23 +18,13 @@ function initProjectData(projId) {
 
 function formatDate(ts) {
   if (!ts || ts === 'Invalid Date' || isNaN(ts)) return 'Unknown';
-  try { 
-    const date = new Date(Number(ts)); 
-    return isNaN(date.getTime()) ? 'Unknown' : date.toLocaleDateString(); 
-  } catch (e) { 
-    return 'Unknown'; 
+  try {
+    const date = new Date(Number(ts));
+    if (isNaN(date.getTime())) return 'Unknown';
+    return date.toLocaleDateString();
+  } catch (e) {
+    return 'Unknown';
   }
-}
-
-function sortProjects(projList) {
-  projList.forEach(p => initProjectData(p.id));
-  if (sortMode === 'custom') return projList;
-  const sorted = [...projList];
-  switch(sortMode) {
-    case 'name-asc': sorted.sort((a, b) => a.name.localeCompare(b.name)); break;
-    case 'name-desc': sorted.sort((a, b) => b.name.localeCompare(a.name)); break;
-  }
-  return sorted;
 }
 
 function render() {
@@ -64,10 +50,10 @@ function render() {
     saveProjects();
   });
   
-  const sortedProjects = sortMode === 'custom' ? [...projects] : sortProjects(projects);
+  const sortedProjects = sortMode === 'custom' ? [...projects] : projects.sort((a, b) => a.name.localeCompare(b.name));
   
   if (sortedProjects.length === 0) {
-    container.innerHTML += '<div class="empty-state" style="grid-column: 1 / -1; text-align: center; padding: 4rem; opacity: 0.5;">No projects yet</div>';
+    container.innerHTML += '<div class="empty-state" style="grid-column: 1 / -1; text-align: center; padding: 4rem;">No projects yet</div>';
     return;
   }
   
@@ -119,25 +105,7 @@ function render() {
       const jsonStr = JSON.stringify(exportData, null, 2);
       const filename = `${proj.name.replace(/[^a-z0-9]/gi, '_').toLowerCase()}_3lo.json`;
       
-      // Try Tauri v2 dialog if available
-      if (IS_TAURI && save) {
-        try {
-          const filePath = await save({
-            title: 'Salva progetto come...',
-            defaultPath: filename,
-            filters: [{ name: 'JSON File', extensions: ['json'] }]
-          });
-          if (filePath) {
-            await writeTextFile(filePath, jsonStr);
-            alert('✅ Progetto esportato con successo!');
-            return;
-          }
-        } catch (err) {
-          console.error('Tauri export error:', err);
-        }
-      }
-      
-      // Fallback: clipboard modal
+      // Fallback: clipboard modal (funziona sempre)
       const modal = document.createElement('div');
       modal.className = 'card-note-modal active';
       modal.innerHTML = `
@@ -150,7 +118,7 @@ function render() {
             File: <b>${filename}</b><br>
             (Copia il JSON e salvalo manualmente)
           </p>
-          <textarea class="card-note-textarea" style="min-height: 200px; font-family: monospace; font-size: 0.75rem;" readonly>${jsonStr.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')}</textarea>
+          <textarea class="card-note-textarea" style="min-height: 200px; font-family: monospace; font-size: 0.75rem;" readonly>${jsonStr.replace(/</g, '&lt;').replace(/>/g, '&gt;')}</textarea>
           <div style="display: flex; gap: 0.5rem; margin-top: 1rem; justify-content: flex-end;">
             <button class="btn-secondary" id="export-copy">📋 Copy JSON</button>
             <button class="btn-primary" onclick="this.closest('.card-note-modal').remove()">Done</button>
@@ -199,4 +167,4 @@ document.getElementById('new-project').addEventListener('click', () => {
 projects.forEach(p => initProjectData(p.id));
 render();
 
-console.log('Home loaded, Tauri available:', IS_TAURI);
+console.log('Home loaded');
