@@ -1,0 +1,57 @@
+{
+  "version": "1.0",
+  "project": {
+    "id": "1741096321",
+    "name": "🌙 Piano d'Azione 2026",
+    "created": 1741096321000
+  },
+  "board": [
+    {
+      "id": "todo",
+      "title": "🔥 Da Fare",
+      "cards": [
+        { "id": "c1", "text": "Completare setup 3LO su Surface (Tauri v2 + Export)" },
+        { "id": "c2", "text": "Backup automatico progetti 3LO (JSON)" },
+        { "id": "c3", "text": "Migrare dati da PC Cagliari quando torno" },
+        { "id": "c4", "text": "Documentare procedura setup per futuri laptop" },
+        { "id": "c5", "text": "Testare export/import tra dispositivi" }
+      ]
+    },
+    {
+      "id": "inprogress",
+      "title": "⚡ In Corso",
+      "cards": [
+        { "id": "c6", "text": "Setup ambiente sviluppo Torre delle Stelle ✅" },
+        { "id": "c7", "text": "Debug finestra bianca 3LO ✅" },
+        { "id": "c8", "text": "Verifica funzionamento Export Save As" }
+      ]
+    },
+    {
+      "id": "done",
+      "title": "✅ Completato",
+      "cards": [
+        { "id": "c9", "text": "Installare Node.js 22 + Rust 1.93" },
+        { "id": "c10", "text": "Installare Tauri CLI v2" },
+        { "id": "c11", "text": "Configurare Vite per progetti 3LO" },
+        { "id": "c12", "text": "Verificare tool Aura funzionanti" }
+      ]
+    },
+    {
+      "id": "ideas",
+      "title": "💡 Idee Future",
+      "cards": [
+        { "id": "c13", "text": "Plugin AI per 3LO (Ollama integration)" },
+        { "id": "c14", "text": "Sincronizzazione cloud opzionale" },
+        { "id": "c15", "text": "Versione GitHub Pages readonly" },
+        { "id": "c16", "text": "Mobile app (Tauri mobile?)" }
+      ]
+    }
+  ],
+  "cards": {
+    "c1": { "note": "Setup completato il 4 marzo" },
+    "c2": { "note": "Usare pulsante Export per backup manuali" },
+    "c6": { "note": "Risolto problema Vite config root:src" },
+    "c13": { "note": "Chiedere ad Aura di creare schede automaticamente" }
+  },
+  "exportedAt": "2026-03-04T16:52:00.000Z"
+}

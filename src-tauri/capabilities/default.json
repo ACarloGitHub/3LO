@@ -1,0 +1,24 @@
+{
+  "identifier": "default",
+  "description": "default permissions for 3LO",
+  "local": true,
+  "windows": ["main"],
+  "permissions": [
+    "core:window:default",
+    "core:window:allow-show",
+    "core:window:allow-hide",
+    "dialog:default",
+    "dialog:allow-open",
+    "dialog:allow-save",
+    "fs:default",
+    "fs:allow-write",
+    "fs:allow-read",
+    "fs:allow-read-dir",
+    "sql:default",
+    "sql:allow-execute",
+    {
+      "identifier": "fs:scope",
+      "allow": [{"path": "$HOME/*"}, {"path": "$HOME/**/*"}]
+    }
+  ]
+}

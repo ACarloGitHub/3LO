@@ -2,36 +2,35 @@
   "build": {
     "beforeDevCommand": "npm run dev",
     "beforeBuildCommand": "npm run build",
-    "devPath": "http://localhost:5173",
-    "distDir": "../src"
+    "devUrl": "http://localhost:5173",
+    "frontendDist": "../src"
   },
-  "tauri": {
-    "allowlist": {
-      "all": false,
-      "fs": {
-        "all": false,
-        "writeFile": true,
-        "readFile": false,
-        "createDir": false,
-        "scope": ["**"]
-      },
-      "dialog": {
-        "all": false,
-        "open": false,
-        "save": true
-      }
+  "bundle": {
+    "active": true,
+    "category": "Productivity",
+    "copyright": "",
+    "icon": ["icons/32x32.png", "icons/128x128.png", "icons/128x128@2x.png", "icons/icon.png"],
+    "shortDescription": "",
+    "targets": "all"
+  },
+  "plugins": {},
+  "identifier": "com.lo3.app",
+  "productName": "3LO",
+  "version": "0.1.0",
+  "app": {
+    "withGlobalTauri": true,
+    "security": {
+      "csp": null
     },
     "windows": [
       {
-        "title": "3LO",
-        "width": 800,
+        "label": "main",
+        "fullscreen": false,
         "height": 600,
         "resizable": true,
-        "fullscreen": false
+        "title": "3LO",
+        "width": 800
       }
-    ],
-    "security": {
-      "csp": null
-    }
+    ]
   }
 }
