@@ -19,6 +19,17 @@ Your tasks, your data, your control.
 
 ### Prerequisites
 
+**Tested versions (March 2026):**
+| Tool | Version | Command to check |
+|------|---------|------------------|
+| Node.js | v22.22.0 | `node --version` |
+| npm | 10.9.4 | `npm --version` |
+| Rust | 1.93.1 | `rustc --version` |
+| Cargo | 1.93.1 | `cargo --version` |
+| Tauri CLI | 2.10.1 | `cargo tauri --version` |
+
+**Installation:**
+
 ```bash
 # 1. Install Node.js 22+
 curl -fsSL https://deb.nodesource.com/setup_22.x | sudo -E bash -
@@ -32,7 +43,7 @@ source ~/.cargo/env
 cargo install tauri-cli --version "^2"
 
 # 4. Install system dependencies (Ubuntu/Debian)
-sudo apt install -y libwebkit2gtk-4.1-dev build-essential libssl-dev libgtk-3-dev
+sudo apt install -y libwebkit2gtk-4.1-dev build-essential libssl-dev libgtk-3-dev libayatana-appindicator3-dev librsvg2-dev
 ```
 
 ### Clone and Run
@@ -63,8 +74,14 @@ cargo tauri dev
 ## 🛠️ Tech Stack
 
 - **Frontend:** Vanilla JavaScript, HTML5, CSS3
+- **Build Tool:** Vite ^6.0.3
 - **Backend:** Rust + Tauri v2
-- **Database:** SQLite (via `tauri-plugin-sql`)
+- **Database:** SQLite (via `tauri-plugin-sql` v2)
+- **Tauri Plugins:**
+  - `tauri-plugin-dialog` v2.6.0+ (native file dialogs)
+  - `tauri-plugin-fs` v2.4.5+ (filesystem access)
+  - `tauri-plugin-sql` v2 (SQLite database)
+  - `tauri-plugin-log` v2 (logging)
 - **UI:** Custom Kanban with SortableJS
 - **Storage:** Local SQLite file (portable)
 
