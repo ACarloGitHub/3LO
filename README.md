@@ -1,90 +1,92 @@
-# 3LO - Offline Kanban Board
+# 3LO - Offline Kanban Board 🌙
 
 Your tasks, your data, your control.
 
 3LO is a free, open-source, offline-first Kanban board — a Trello alternative that respects your privacy. No subscriptions, no cloud lock-in, no data mining. Just you and your projects.
 
-## Current Status
+## ✅ Current Status (March 2026)
 
-This project is in active development.
+**3LO is functional and ready to use!**
 
-We are building 3LO step by step. It works and you can try it today, but you will need to build from source (see Prerequisites below).
+- ✅ **Tauri v2** - Native app with Rust backend
+- ✅ **SQLite Database** - Persistent storage (replaced localStorage)
+- ✅ **Export Projects** - Save as JSON with native Save dialog
+- ✅ **Import Projects** - Load JSON backups
+- ✅ **Drag & Drop** - SortableJS for cards and columns
+- ✅ **Cross-platform** - Linux (Windows/macOS coming)
 
-Our Goal: Make 3LO a one-click installable, portable, cross-platform application. Each project stays in its own folder, wherever you want. No cloud, no accounts, no dependencies after installation.
+## 🚀 Quick Start
 
-## Features
+### Prerequisites
 
-- Project Management - Create, organize, and manage multiple boards
-- Kanban Boards - Columns, cards, drag and drop (powered by SortableJS)
-- 100% Offline - All data stored locally in your folders
-- Lightning Fast - Built with Tauri, under 10MB bundle
-- Dark Theme - Easy on the eyes, with light theme coming
-- AI Ready - Planned integration with local Ollama models
-- Attachments - Link files, URLs, documents to cards
-- Nested Boards - Sub-columns for complex workflows
+```bash
+# 1. Install Node.js 22+
+curl -fsSL https://deb.nodesource.com/setup_22.x | sudo -E bash -
+sudo apt install -y nodejs
 
-## Prerequisites (Current)
+# 2. Install Rust
+curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
+source ~/.cargo/env
 
-To run 3LO today, you will need:
+# 3. Install Tauri CLI v2
+cargo install tauri-cli --version "^2"
 
-- Rust (https://rustup.rs/)
-- Node.js (https://nodejs.org/)
-- Tauri CLI (https://tauri.app/)
+# 4. Install system dependencies (Ubuntu/Debian)
+sudo apt install -y libwebkit2gtk-4.1-dev build-essential libssl-dev libgtk-3-dev
+```
 
-## Build and Run (Development)
+### Clone and Run
 
-    git clone https://github.com/ACarloGitHub/3LO.git
-    cd 3LO
-    cargo tauri dev
+```bash
+git clone https://github.com/ACarloGitHub/3LO.git
+cd 3LO
+npm install
+cd src-tauri
+cargo tauri dev
+```
 
-## Future Distribution
+## ✨ Features
 
-The goal of Aura and Carlo is to make 3LO:
+| Feature | Status |
+|---------|--------|
+| Project Management | ✅ Working |
+| Kanban Boards | ✅ Working |
+| Drag & Drop | ✅ Working |
+| Export to JSON | ✅ Working (native Save dialog) |
+| Import from JSON | ✅ Working |
+| SQLite Database | ✅ Working |
+| Dark Theme | 🚧 Default (Light coming) |
+| AI Integration | 📅 Planned |
+| File Attachments | 📅 Planned |
+| Collaborative | 📅 Future |
 
-- One-click installable - Download, double-click, done
-- Portable - Run from USB, no system installation
-- Cross-platform - Linux, macOS, Windows
-- Self-contained - Each project lives in its own folder, fully portable
+## 🛠️ Tech Stack
 
-Coming soon: .deb (Ubuntu/Debian), .AppImage (portable Linux), .exe (Windows), .dmg (macOS)
+- **Frontend:** Vanilla JavaScript, HTML5, CSS3
+- **Backend:** Rust + Tauri v2
+- **Database:** SQLite (via `tauri-plugin-sql`)
+- **UI:** Custom Kanban with SortableJS
+- **Storage:** Local SQLite file (portable)
 
-## Tech Stack
+## 💾 Data Storage
 
-- Frontend: Vanilla JavaScript, HTML5, CSS3
-- Backend: Rust + Tauri
-- Storage: localStorage (MVP) to SQLite (v1.0)
-- UI: Custom Kanban with SortableJS
-- Build: Tauri (cross-platform native apps)
+Projects are stored in:
+```
+Linux: ~/.config/3LO/3lo.db
+Windows: %APPDATA%\3LO\3lo.db
+macOS: ~/Library/Application Support/3LO/3lo.db
+```
 
-## Roadmap
+**Backup:** Use the Export button to save JSON backups that can be imported anywhere.
 
-- [x] MVP with drag and drop
-- [x] Project management
-- [x] Export to JSON
-- [ ] SQLite database
-- [ ] Light/Dark theme toggle
-- [ ] AI integration (Ollama)
-- [ ] Nested columns
-- [ ] File attachments
-- [ ] Self-hosting mode
-- [ ] Windows and macOS builds
-- [ ] One-click installers
+## 🗺️ Roadmap 2026
 
-## Why 3LO?
+See [ROADMAP.md](ROADMAP.md) for detailed feature planning.
 
-We were tired of subscriptions, cloud dependencies, and not owning our own tools.
-This is for people who want control over their productivity software.
-Local-first, extensible, yours forever.
+## 🤝 Contributing
 
-## Contributing
+Made with ❤️ by Carlo and Aura.
 
-This is a personal project born from vibe coding with my AI assistant Aura.
-Contributions welcome! Open an issue or PR.
+## 📄 License
 
-## License
-
-MIT - Use it, modify it, make it yours.
-
----
-
-Made with love by Carlo and Aura
+MIT
