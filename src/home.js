@@ -1,11 +1,10 @@
 // Home - Projects Management (con SQLite)
 import { getAllProjects, saveProject, deleteProject, loadProject, initDB } from './db_sqlite.js';
-import { save, open } from '@tauri-apps/plugin-dialog';
-import { writeTextFile, readTextFile } from '@tauri-apps/plugin-fs';
+import { save } from '@tauri-apps/plugin-dialog';
+import { writeTextFile } from '@tauri-apps/plugin-fs';
 
 let projects = [];
 let currentSortMode = 'custom';
-let isImporting = false;
 
 // Inizializza all'avvio
 async function init() {
@@ -159,52 +158,6 @@ document.getElementById('new-project').addEventListener('click', async () => {
     await saveProject(project, [], {});
     await loadProjects();
     render();
-  }
-});
-
-// Import Project - usa dialog Tauri (una sola finestra)
-document.getElementById('import-project')?.addEventListener('click', async () => {
-  if (isImporting) return;
-  isImporting = true;
-  
-  try {
-    const filePath = await open({
-      title: 'Importa progetto',
-      filters: [{ name: 'JSON', extensions: ['json'] }],
-      multiple: false
-    });
-    
-    if (!filePath) {
-      isImporting = false;
-      return;
-    }
-    
-    const content = await readTextFile(filePath);
-    const data = JSON.parse(content);
-    
-    if (data.project && data.project.id && data.project.name) {
-      const existing = await getAllProjects();
-      const found = existing.find(p => p.id === data.project.id);
-      
-      if (found) {
-        if (!confirm('Progetto "' + data.project.name + '" esiste già. Sovrascrivere?')) {
-          isImporting = false;
-          return;
-        }
-      }
-      
-      await saveProject(data.project, data.board || [], data.cards || {});
-      alert('✅ Progetto importato: ' + data.project.name);
-      await loadProjects();
-      render();
-    } else {
-      alert('❌ File non valido');
-    }
-  } catch (err) {
-    alert('❌ Errore: ' + err.message);
-    console.error(err);
-  } finally {
-    isImporting = false;
   }
 });
 
