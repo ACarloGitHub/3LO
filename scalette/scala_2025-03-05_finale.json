@@ -1,0 +1,126 @@
+{
+  "_documentation": {
+    "format": "3LO Project Export v1.0",
+    "description": "Struttura JSON per importazione in 3LO",
+    "fields": {
+      "version": "Versione formato (stringa, es: '1.0')",
+      "project": {
+        "id": "ID univoco progetto (stringa)",
+        "name": "Nome visualizzato (stringa)",
+        "created": "Timestamp creazione (numero, epoch ms)"
+      },
+      "board": "Array colonne, ognuna con {id, title, cards: [{id, text}]}",
+      "cards": "Oggetto metadata card (può essere vuoto {})",
+      "exportedAt": "ISO 8601 timestamp export"
+    },
+    "regole": [
+      "board è array: [{id, title, cards: [...]}]",
+      "cards dentro board ha solo {id, text}",
+      "cards (root) è oggetto metadata: {cardId: {created, modified, note}}",
+      "id progetto univoco, senza spazi",
+      "text supporta emoji e unicode"
+    ]
+  },
+  "version": "1.0",
+  "project": {
+    "id": "scaletta-2025-03-05",
+    "name": "Scalup 05-03-2025",
+    "created": 1741184040000
+  },
+  "board": [
+    {
+      "id": "found",
+      "title": "🏗️ FONDAMENTA",
+      "cards": [
+        { "id": "zoom-1", "text": "Zoom in/out area di lavoro" },
+        { "id": "1772721211727", "text": "Spostamento (scroll dx e sx della board) veloce, incrementale o tramite trascinamento" },
+        { "id": "1772721368175", "text": "Inserimento schede con tasto invio oltre che con ADD.\nMaiuscolo più invio per andare a capo" },
+        { "id": "1772721463162", "text": "Modifica Titolo Progetto" }
+      ]
+    },
+    {
+      "id": "ui",
+      "title": "🎨 UI CORE",
+      "cards": [
+        { "id": "col-1", "text": "Colori progetti (solidi + gradienti-ombreggiature)" },
+        { "id": "col-2", "text": "Colori schede (solidi + gradienti-ombreggiature)" },
+        { "id": "head-1", "text": "Header e sfondo: colori pieni+gradienti-ombreggiature" },
+        { "id": "head-2", "text": "Header e sfondo: colori, gradienti e ombreggiature" }
+      ]
+    },
+    {
+      "id": "uiadv",
+      "title": "✨ UI AVANZATA",
+      "cards": [
+        { "id": "img-1", "text": "Sfondi con immagini (jpg, png, gif, tiff)" },
+        { "id": "img-2", "text": "Header con immagini" },
+        { "id": "1772721316261", "text": "Lista con immagini" },
+        { "id": "1772721324570", "text": "Scheda con immagini" },
+        { "id": "1772721333622", "text": "Progetti con immagini" }
+      ]
+    },
+    {
+      "id": "feat",
+      "title": "⚙️ FUNZIONALITÀ",
+      "cards": [
+        { "id": "att-1", "text": "Allegati alle schede (files, cartelle, documenti, ebook, multimedia, ecc.)" },
+        { "id": "search-1", "text": "Ricerca e filtro" },
+        { "id": "find-1", "text": "Trova e sostituisci" },
+        { "id": "team-1", "text": "Condivisione team" }
+      ]
+    },
+    {
+      "id": "ai",
+      "title": "🤖 AI (Ollama + LM Studio)",
+      "cards": [
+        { "id": "ai-1", "text": "AI: Crea progetto da prompt" },
+        { "id": "ai-2", "text": "AI: Modifica con AI" },
+        { "id": "ai-3", "text": "AI: Brainstorming" },
+        { "id": "1772729615277", "text": "Oltre a Ollama, anche LLM studio potrebbe essere supportato per queste funzionalità" }
+      ]
+    },
+    {
+      "id": "easter",
+      "title": "🎭 EASTER EGGS",
+      "cards": [
+        { "id": "pan-1", "text": "Panic Button" },
+        { "id": "fake-1", "text": "Fake: Foglio di calcolo Excel" },
+        { "id": "fake-2", "text": "Fake: Desktop Windows XP" },
+        { "id": "egg-1", "text": "Screensaver XP dopo 3 min" },
+        { "id": "egg-2", "text": "Altri Easter Eggs" }
+      ]
+    },
+    {
+      "id": "extra",
+      "title": "✏️ EXTRA",
+      "cards": [
+        { "id": "font-1", "text": "Definizione fonts personalizzati" },
+        { "id": "logo-1", "text": "Logo 3LO ottimizzazione" }
+      ]
+    },
+    {
+      "id": "1772720992267",
+      "title": "FATTO",
+      "cards": [
+        { "id": "exp-1", "text": "Export: Salvataggio file vero" },
+        { "id": "db-1", "text": "Database SQLite locale" },
+        { "id": "imp-1", "text": "Import: Caricamento da file system" }
+      ]
+    },
+    {
+      "id": "todo",
+      "title": "🔴 BUG",
+      "cards": [
+        { "id": "bug-1", "text": "BUG: Sistemare doppia finestra import" }
+      ]
+    }
+  ],
+  "cards": {
+    "bug-1": {
+      "created": 1772720784809,
+      "modified": 1772721064425,
+      "note": "Compare una doppia finestra di importazione avvenuta con successo, con due ok da premere (uno per finestra). Le due finestre sono identiche e sovrapposte\n"
+    }
+  },
+  "exportedAt": "2026-03-05T17:00:00.000Z"
+}
