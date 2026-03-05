@@ -1,5 +1,5 @@
 // Home - Projects Management (con SQLite)
-import { getAllProjects, saveProject, deleteProject, loadProject, initDB } from './db_sqlite.js';
+import { getAllProjects, saveProject, deleteProject, loadProject, initDB, renameProject } from './db_sqlite.js';
 import { save } from '@tauri-apps/plugin-dialog';
 import { writeTextFile } from '@tauri-apps/plugin-fs';
 
@@ -73,6 +73,7 @@ async function render() {
       <div class="project-meta">${formatDate(proj.created)}</div>
       <div class="project-actions">
         <button class="btn-open" data-id="${proj.id}">Open</button>
+        <button class="btn-rename" data-id="${proj.id}">Ren</button>
         <button class="btn-export" data-id="${proj.id}">Exp</button>
         <button class="btn-delete" data-id="${proj.id}">Del</button>
       </div>
@@ -179,6 +180,22 @@ async function render() {
       const id = e.target.dataset.id;
       if (confirm('Delete?')) {
         await deleteProject(id);
+        await loadProjects();
+        render();
+      }
+    });
+  });
+
+  // RENAME
+  document.querySelectorAll('.btn-rename').forEach(btn => {
+    btn.addEventListener('click', async (e) => {
+      const id = e.target.dataset.id;
+      const proj = projects.find(p => String(p.id) === String(id));
+      if (!proj) return;
+      
+      const newName = prompt('Nuovo nome:', proj.name);
+      if (newName && newName.trim() !== '' && newName !== proj.name) {
+        await renameProject(id, newName.trim());
         await loadProjects();
         render();
       }

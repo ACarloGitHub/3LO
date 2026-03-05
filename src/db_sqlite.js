@@ -72,6 +72,15 @@ export async function deleteProject(projectId) {
   await db.execute('DELETE FROM projects WHERE id = ?', [projectId]);
 }
 
+// Rinomina progetto (solo nome, dati invariati)
+export async function renameProject(projectId, newName) {
+  const db = await initDB();
+  await db.execute(
+    'UPDATE projects SET name = ? WHERE id = ?',
+    [newName, projectId]
+  );
+}
+
 // Esporta tutto (per backup)
 export async function exportAll() {
   const db = await initDB();
