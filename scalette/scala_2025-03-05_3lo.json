@@ -1,0 +1,57 @@
+{
+  "version": "1.0",
+  "project": {
+    "id": "sc roadmap-2025-03-05",
+    "name": "3LO - Scalup 05-03-2025",
+    "created": 1741184040000
+  },
+  "board": [
+    { "id": "urgent", "title": "🔴 URGENTE (Blocca tutto)" },
+    { "id": "foundation", "title": "🏗️ FONDAMENTA" },
+    { "id": "uicore", "title": "🎨 UI CORE" },
+    { "id": "uiadv", "title": "✨ UI AVANZATA" },
+    { "id": "features", "title": "⚙️ FUNZIONALITÀ" },
+    { "id": "ai", "title": "🤖 INTEGRAZIONE AI" },
+    { "id": "easter", "title": "🎭 SOCIAL ANXIETY / EASTER EGGS" }
+  ],
+  "cards": {
+    "urgent": [
+      { "id": "bug-import", "title": "BUG: Sistemare doppia finestra import", "content": "Il dialog file triggera due volte. Soluzione: usare API Tauri open() invece di input HTML" },
+      { "id": "database-sql", "title": "Database SQLite locale", "content": "Setup DB con Tauri SQL plugin. Tabelle: projects, columns, cards, attachments, settings" }
+    ],
+    "foundation": [
+      { "id": "export-solido", "title": "Export: Salvataggio file vero", "content": "Usare tauri-plugin-dialog save(). Estensione .3lo o .json" },
+      { "id": "import-solido", "title": "Import: Caricamento da file system", "content": "Aprire dialog, leggere file, popolare database" },
+      { "id": "zoom-workspace", "title": "Zoom in/out area di lavoro", "content": "Ctrl+scroll o pulsanti +/- per zoomare la board. Scala 50-200%" }
+    ],
+    "uicore": [
+      { "id": "colors-project", "title": "Colori progetti (solidi + gradienti)", "content": "Picker colore per ogni progetto. Salva in DB" },
+      { "id": "colors-card", "title": "Colori schede (solidi + gradienti)", "content": "Ogni scheda può avere colore personalizzato" },
+      { "id": "header-bg-solid", "title": "Header e sfondo: colori pieni", "content": "Personalizzazione header board e background area di lavoro" },
+      { "id": "header-bg-gradient", "title": "Header e sfondo: gradienti", "content": "Gradienti lineari e radiali. Picker con 2+ colori" }
+    ],
+    "uiadv": [
+      { "id": "bg-images", "title": "Sfondi con immagini (jpg, png, gif, tiff)", "content": "Caricare immagini da file. Preview. Resize/fit options (cover, contain, repeat)" },
+      { "id": "header-images", "title": "Header con immagini", "content": "Stesso sistema dello sfondo, ma per l'header" }
+    ],
+    "features": [
+      { "id": "attachments", "title": "Allegati alle schede", "content": "PDF, DOC, immagini, video, Excel, cartelle. Storage in progetto/assets/attachments/" },
+      { "id": "search-filter", "title": "Ricerca e filtro", "content": "Barra ricerca globale. Filtra per: testo, tag, data, allegati" },
+      { "id": "find-replace", "title": "Trova e sostituisci", "content": "Ctrl+H. Cerca testo in tutte le schede, sostituisci in tutto o selezionati" },
+      { "id": "team-share", "title": "Condivisione team", "content": "Cloud sync tra dispositivi. Backend o P2P. Da decidere architettura" }
+    ],
+    "ai": [
+      { "id": "ai-create", "title": "AI: Crea progetto da prompt", "content": "Input prompt → Ollama locale → genera struttura colonne e schede. Modello: qwen2.5-coder o llama3.2" },
+      { "id": "ai-edit", "title": "AI: Modifica con AI", "content": "Seleziona schede → chiedi modifiche → AI riorganizza/riscrive" },
+      { "id": "ai-brainstorm", "title": "AI: Brainstorming", "content": "Chat con AI per generare idee, task, categorie. Modalità creativa" }
+    ],
+    "easter": [
+      { "id": "panic-button", "title": "Panic Button", "content": "Tasto emergenza (F12). Nasconde 3LO, mostra fake screen. Configurabile: foglio calcolo / Windows XP / altro" },
+      { "id": "fake-spreadsheet", "title": "Fake: Foglio di calcolo Excel", "content": "HTML che sembra Excel con dati casuali. Full screen" },
+      { "id": "fake-winxp", "title": "Fake: Desktop Windows XP", "content": "Recreazione desktop XP con icone, start menu, finestre" },
+      { "id": "xp-screensaver", "title": "Windows XP Screensaver", "content": "Dopo 3 minuti: screensaver XP (tubo peloso!)" },
+      { "id": "more-easter", "title": "Altri Easter Eggs", "content": "Da suggerire: Konami code, giorni specifici, click segreto, suoni..." }
+    ]
+  },
+  "exportedAt": "2025-03-05T14:30:00.000Z"
+}

@@ -44,6 +44,7 @@ async function render() {
   // Controlli ordinamento
   const sortDiv = document.createElement('div');
   sortDiv.className = 'home-sort-controls';
+  sortDiv.style.cssText = 'grid-column: 1 / -1;';
   sortDiv.innerHTML = `
     <label>Sort:</label>
     <select id="home-sort-select">
@@ -94,9 +95,38 @@ async function render() {
       const proj = projects.find(p => String(p.id) === String(id));
       if (!proj) return;
 
-      // Carica dati completi
-      const fullData = await loadProject(id);
+      // Carica dati da localStorage (dove li salva board.js)
+      const boardJson = localStorage.getItem('3lo_board_' + id);
+      const cardsJson = localStorage.getItem('3lo_cards_data_' + id);
+      
+      const fullData = {
+        project: proj,
+        board: boardJson ? JSON.parse(boardJson) : [],
+        cards: cardsJson ? JSON.parse(cardsJson) : {}
+      };
       const exportData = {
+        "_documentation": {
+          "format": "3LO Project Export v1.0",
+          "description": "Struttura JSON per importazione in 3LO",
+          "fields": {
+            "version": "Versione formato (stringa, es: '1.0')",
+            "project": {
+              "id": "ID univoco progetto (stringa)",
+              "name": "Nome visualizzato (stringa)",
+              "created": "Timestamp creazione (numero, epoch ms)"
+            },
+            "board": "Array colonne, ognuna con {id, title, cards: [{id, text}]}",
+            "cards": "Oggetto metadata card (può essere vuoto {})",
+            "exportedAt": "ISO 8601 timestamp export"
+          },
+          "regole": [
+            "board è array: [{id, title, cards: [...]}]",
+            "cards dentro board ha solo {id, text}",
+            "cards (root) è oggetto metadata: {cardId: {created, modified, note}}",
+            "id progetto univoco, senza spazi",
+            "text supporta emoji e unicode"
+          ]
+        },
         version: '1.0',
         project: proj,
         board: fullData?.board || [],
