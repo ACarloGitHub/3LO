@@ -1,0 +1,79 @@
+import { saveProject, getAllProjects, initDB } from './db_sqlite.js';
+
+// Inizializza DB
+initDB().then(() => console.log('DB ready'));
+
+// Flag anti-doppio
+let isImporting = false;
+let lastImportedFile = null;
+
+// Click Import
+const importBtn = document.getElementById('import-project');
+const fileInput = document.getElementById('import-file');
+
+if (importBtn && fileInput) {
+  
+  importBtn.addEventListener('click', () => {
+    if (isImporting) return;
+    fileInput.click();
+  });
+
+  fileInput.addEventListener('change', async (e) => {
+    if (isImporting) return;
+    isImporting = true;
+    
+    const file = e.target.files[0];
+    if (!file) {
+      isImporting = false;
+      return;
+    }
+    
+    // Controllo doppio evento - se stesso file in < 2 secondi, ignora
+    if (lastImportedFile && lastImportedFile.name === file.name && lastImportedFile.time > Date.now() - 2000) {
+      console.log('Ignoro evento duplicato per:', file.name);
+      fileInput.value = '';
+      isImporting = false;
+      return;
+    }
+    
+    lastImportedFile = { name: file.name, time: Date.now() };
+    
+    try {
+      const text = await file.text();
+      const data = JSON.parse(text);
+      console.log('Importing:', data);
+      
+      if (data.project && data.project.id && data.project.name) {
+        const existing = await getAllProjects();
+        const found = existing.find(p => p.id === data.project.id);
+        
+        if (found) {
+          if (!confirm('Progetto "' + data.project.name + '" esiste già. Sovrascrivere?')) {
+            fileInput.value = '';
+            isImporting = false;
+            return;
+          }
+        }
+        
+        // Salva progetto
+        await saveProject(data.project, data.board || [], data.cards || {});
+        
+        // Alert UNA SOLA VOLTA
+        setTimeout(() => {
+          alert('✅ Progetto importato: ' + data.project.name);
+          window.location.reload();
+        }, 100);
+        
+        return; // Evita esecuzione oltre
+      } else {
+        alert('❌ File non valido (manca project.id o project.name)');
+      }
+    } catch (err) {
+      alert('❌ Errore: ' + err.message);
+      console.error(err);
+    } finally {
+      fileInput.value = '';
+      isImporting = false;
+    }
+  });
+}

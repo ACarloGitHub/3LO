@@ -1,0 +1,74 @@
+{
+  "version": "1.0",
+  "project": {
+    "id": "1741113120",
+    "name": "🎯 Piano Sviluppo 3LO 2026",
+    "created": 1741113120000
+  },
+  "board": [
+    {
+      "id": "immediate",
+      "title": "🔥 Priorità Immediata (Questa Settimana)",
+      "cards": [
+        { "id": "p1", "text": "Configurare gh auth per push automatico" },
+        { "id": "p2", "text": "Zoom in/out board (Ctrl+scroll)" },
+        { "id": "p3", "text": "Bottoni ingranaggio sostituire testo" },
+        { "id": "p4", "text": "Colori personalizzabili header" }
+      ]
+    },
+    {
+      "id": "short",
+      "title": "⚡ Breve Termine (2-3 Settimane)",
+      "columns": [
+        { "id": "c1", "text": "Sfondi immagini per board" },
+        { "id": "c2", "text": "Barra ricerca globale" },
+        { "id": "c3", "text": "Allegati immagini (base)" },
+        { "id": "c4", "text": "Tema Light/Dark toggle" }
+      ]
+    },
+    {
+      "id": "medium",
+      "title": "📅 Medio Termine (Aprile)",
+      "cards": [
+        { "id": "m1", "text": "Integrazione Ollama per schede auto" },
+        { "id": "m2", "text": "Allegati documenti/video" },
+        { "id": "m3", "text": "Social Anxiety Mode (schermo fake)" },
+        { "id": "m4", "text": "Colori/immagini per colonne e schede" }
+      ]
+    },
+    {
+      "id": "long",
+      "title": "🚀 Lungo Termine (Maggio+)",
+      "cards": [
+        { "id": "l1", "text": "Multi-utente / Condivisione" },
+        { "id": "l2", "text": "Sync P2P o cloud" },
+        { "id": "l3", "text": "Installer .deb .AppImage .exe" },
+        { "id": "l4", "text": "Portabilità completa (USB)" }
+      ]
+    },
+    {
+      "id": "ideas",
+      "title": "💡 Idee / Brainstorming",
+      "cards": [
+        { "id": "i1", "text": "Gamification achievement" },
+        { "id": "i2", "text": "Easter egg tema '90s" },
+        { "id": "i3", "text": "Integrazione Telegram bot?" },
+        { "id": "i4", "text": "Versione web read-only" }
+      ]
+    }
+  ],
+  "cards": {
+    "p1": { "note": "Devo fare gh auth login sul Surface" },
+    "p2": { "note": "CSS transform: scale() + wheel event" },
+    "p3": { "note": "Icona ⚙️ FontAwesome o SVG" },
+    "p4": { "note": "Color picker nativo HTML5" },
+    "c1": { "note": "CSS background-image + file picker" },
+    "c2": { "note": "SQLite LIKE query su nome schede" },
+    "c3": { "note": "tauri-plugin-fs per copia file" },
+    "m1": { "note": "API Ollama localhost:11434" },
+    "m3": { "note": "Screen fake Windows XP 🤣" },
+    "l1": { "note": "WebSocket o WebRTC per sync" }
+  },
+  "exportedAt": "2026-03-04T18:12:00.000Z",
+  "author": "Aura - priorità tecniche"
+}
