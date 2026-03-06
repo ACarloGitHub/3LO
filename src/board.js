@@ -115,6 +115,7 @@ function createCard(card) {
   cardEl.querySelector('.card-note-btn').addEventListener('click', (e) => {
     e.stopPropagation();
     openNote(card.id);
+  });
   
   // Elimina scheda
   cardEl.querySelector(".card-delete-btn").addEventListener("click", (e) => {
@@ -131,7 +132,6 @@ function createCard(card) {
         cardEl.remove();
       }
     }
-  });
   });
   
   return cardEl;
