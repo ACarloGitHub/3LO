@@ -101,6 +101,7 @@ function createCard(card) {
     <div class="card-text" contenteditable="true">${card.text}</div>
     <div class="card-actions">
       <button class="card-note-btn">📝 Note</button>
+      <button class="card-delete-btn" title="Elimina scheda">🗑️</button>
     </div>
   `;
   
@@ -114,6 +115,23 @@ function createCard(card) {
   cardEl.querySelector('.card-note-btn').addEventListener('click', (e) => {
     e.stopPropagation();
     openNote(card.id);
+  
+  // Elimina scheda
+  cardEl.querySelector(".card-delete-btn").addEventListener("click", (e) => {
+    e.stopPropagation();
+    if (confirm("Eliminare questa scheda?")) {
+      // Trova la colonna e rimuovi la scheda
+      const colEl = cardEl.closest(".column");
+      const colId = colEl.dataset.id;
+      const column = columns.find(c => c.id === colId);
+      if (column) {
+        column.cards = column.cards.filter(c => c.id !== card.id);
+        delete cardsData[card.id];
+        save();
+        cardEl.remove();
+      }
+    }
+  });
   });
   
   return cardEl;
