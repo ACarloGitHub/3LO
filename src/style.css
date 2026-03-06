@@ -495,3 +495,21 @@ body {
   transform-origin: top left;
   transition: transform 0.15s cubic-bezier(0.4, 0, 0.2, 1);
 }
+
+/* === DRAG-TO-SCROLL === */
+.board-container {
+  cursor: grab;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+.board-container:active,
+.board-container.grabbing {
+  cursor: grabbing;
+}
+
+.board-container .card,
+.board-container button,
+.board-container .column-title {
+  cursor: default;
+}

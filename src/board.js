@@ -282,6 +282,7 @@ document.getElementById("zoom-reset").addEventListener("click", resetZoom);
 init();
   // Inizializza zoom dopo aver caricato il progetto
   setTimeout(applyZoom, 100);
+  setTimeout(initDragToScroll, 200);
 // ZOOM FLUIDO
 
 function applyZoom() {
@@ -310,3 +311,75 @@ document.addEventListener("wheel", function(e) {
   }
 }, { passive: false });
 
+
+// DRAG-TO-SCROLL ORIZZONTALE
+let isDraggingScroll = false;
+let startXScroll = 0;
+let scrollLeftStart = 0;
+let autoScrollTimer = null;
+const EDGE_MARGIN = 80;
+const MAX_SPEED = 25;
+
+function initDragToScroll() {
+  const container = document.querySelector(".board-container");
+  if (!container) return;
+  container.style.cursor = "grab";
+  container.addEventListener("mousedown", handleDragStart);
+  document.addEventListener("mousemove", handleDragMove);
+  document.addEventListener("mouseup", handleDragEnd);
+}
+
+function handleDragStart(e) {
+  if (e.target.closest(".card") || e.target.closest(".column") || e.target.closest("button")) return;
+  isDraggingScroll = true;
+  const container = document.querySelector(".board-container");
+  startXScroll = e.pageX - container.offsetLeft;
+  scrollLeftStart = container.scrollLeft;
+  container.style.cursor = "grabbing";
+}
+
+function handleDragMove(e) {
+  if (!isDraggingScroll) return;
+  e.preventDefault();
+  const container = document.querySelector(".board-container");
+  const rect = container.getBoundingClientRect();
+  const mouseX = e.clientX - rect.left;
+  const distLeft = mouseX;
+  const distRight = rect.width - mouseX;
+  if (distLeft < EDGE_MARGIN) {
+    const speed = Math.max(3, MAX_SPEED * (1 - distLeft / EDGE_MARGIN));
+    startAutoScroll(-speed);
+  } else if (distRight < EDGE_MARGIN) {
+    const speed = Math.max(3, MAX_SPEED * (1 - distRight / EDGE_MARGIN));
+    startAutoScroll(speed);
+  } else {
+    stopAutoScroll();
+    const x = e.pageX - container.offsetLeft;
+    const walk = (x - startXScroll) * 1.5;
+    container.scrollLeft = scrollLeftStart - walk;
+  }
+}
+
+function handleDragEnd() {
+  if (!isDraggingScroll) return;
+  isDraggingScroll = false;
+  stopAutoScroll();
+  const container = document.querySelector(".board-container");
+  if (container) container.style.cursor = "grab";
+}
+
+function startAutoScroll(speed) {
+  if (autoScrollTimer) clearInterval(autoScrollTimer);
+  const container = document.querySelector(".board-container");
+  if (!container) return;
+  autoScrollTimer = setInterval(() => {
+    container.scrollLeft += speed;
+  }, 16);
+}
+
+function stopAutoScroll() {
+  if (autoScrollTimer) {
+    clearInterval(autoScrollTimer);
+    autoScrollTimer = null;
+  }
+}
