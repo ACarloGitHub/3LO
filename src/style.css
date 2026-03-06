@@ -427,3 +427,71 @@ body {
 .home-sort-controls select {
   color-scheme: dark;
 }
+
+/* === ZOOM CONTROLS === */
+.zoom-controls {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-left: auto;
+  padding-left: 1rem;
+  border-left: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.btn-zoom {
+  background: rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  color: #fff;
+  width: 36px;
+  height: 36px;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 1.2rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s ease;
+}
+
+.btn-zoom:hover {
+  background: rgba(255, 255, 255, 0.2);
+  transform: scale(1.05);
+}
+
+.btn-zoom:active {
+  transform: scale(0.95);
+}
+
+#zoom-reset {
+  width: 60px;
+  font-size: 0.9rem;
+  font-weight: 500;
+}
+
+/* === BOARD ZOOM SUPPORT === */
+.app {
+  overflow: auto;
+}
+
+.board {
+  transform-origin: top left;
+  will-change: transform;
+}
+
+/* === BOARD DIMENSIONI ZOOM === */
+.board-container {
+  flex: 1;
+  overflow: auto;
+  padding: 1rem;
+  min-height: 0;
+}
+
+.board {
+  display: flex;
+  gap: 1rem;
+  padding: 1rem;
+  min-width: fit-content;
+  min-height: calc(100vh - 200px);
+  transform-origin: top left;
+  transition: transform 0.15s cubic-bezier(0.4, 0, 0.2, 1);
+}

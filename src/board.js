@@ -4,6 +4,12 @@ let columns = [];
 let cardsData = {};
 let currentProjectId = null;
 
+// Zoom state per zoom fluido
+let zoomLevel = 1.0;
+const ZOOM_MIN = 0.5;
+const ZOOM_MAX = 2.0;
+const ZOOM_STEP = 0.1;
+
 function save() {
   localStorage.setItem('3lo_board_' + currentProjectId, JSON.stringify(columns));
   localStorage.setItem('3lo_cards_data_' + currentProjectId, JSON.stringify(cardsData));
@@ -268,4 +274,39 @@ document.getElementById('add-list').addEventListener('click', () => {
   }
 });
 
+// Event listener per pulsanti zoom
+document.getElementById("zoom-in").addEventListener("click", zoomIn);
+document.getElementById("zoom-out").addEventListener("click", zoomOut);
+document.getElementById("zoom-reset").addEventListener("click", resetZoom);
+
 init();
+  // Inizializza zoom dopo aver caricato il progetto
+  setTimeout(applyZoom, 100);
+// ZOOM FLUIDO
+
+function applyZoom() {
+  const board = document.getElementById("board");
+  if (board) {
+    board.style.transformOrigin = "top left";
+    board.style.transition = "transform 0.15s cubic-bezier(0.4, 0, 0.2, 1)";
+    board.style.transform = "scale(" + zoomLevel + ")";
+  }
+
+  // Aggiorna il pulsante percentuale
+  const zoomResetBtn = document.getElementById("zoom-reset");
+  if (zoomResetBtn) {
+    zoomResetBtn.textContent = Math.round(zoomLevel * 100) + "%";
+  }
+}
+
+function zoomIn() { if (zoomLevel < ZOOM_MAX) { zoomLevel = Math.min(ZOOM_MAX, zoomLevel + ZOOM_STEP); applyZoom(); } }
+function zoomOut() { if (zoomLevel > ZOOM_MIN) { zoomLevel = Math.max(ZOOM_MIN, zoomLevel - ZOOM_STEP); applyZoom(); } }
+function resetZoom() { zoomLevel = 1.0; applyZoom(); }
+
+document.addEventListener("wheel", function(e) {
+  if (e.ctrlKey) {
+    e.preventDefault();
+    if (e.deltaY < 0) zoomIn(); else zoomOut();
+  }
+}, { passive: false });
+

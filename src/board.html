@@ -14,8 +14,13 @@
           <h1 id="board-title" contenteditable="true" spellcheck="false">Board</h1>
         </div>
         <button id="add-list" class="btn-primary">+ New List</button>
+        <div class="zoom-controls">
+          <button id="zoom-out" class="btn-zoom" title="Zoom Out (-)">−</button>
+          <button id="zoom-reset" class="btn-zoom" title="Reset Zoom (Ctrl+0)">100%</button>
+          <button id="zoom-in" class="btn-zoom" title="Zoom In (+)">+</button>
+        </div>
       </header>
-      <div class="board" id="board"></div>
+      <div class="board-container"><div class="board" id="board"></div></div>
     </div>
     <script src="https://cdn.jsdelivr.net/npm/sortablejs@latest/Sortable.min.js"></script>
     <script src="./db.js"></script>
