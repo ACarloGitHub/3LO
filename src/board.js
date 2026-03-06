@@ -142,6 +142,19 @@ function addCard(container, columnId) {
   btn.style.display = 'none';
   container.parentElement.appendChild(wrapper);
   textarea.focus();
+  // Tasti scorciatoia per textarea
+  textarea.addEventListener("keydown", function(e) {
+    if (e.key === "Enter") {
+      if (e.shiftKey) {
+        // Maiusc+Invio = a capo, comportamento default
+        return;
+      } else {
+        // Solo Invio = crea scheda
+        e.preventDefault();
+        addBtn.click();
+      }
+    }
+  });
   
   addBtn.addEventListener('click', () => {
     if (textarea.value.trim()) {
