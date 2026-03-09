@@ -14,6 +14,7 @@
           <span class="logo-text">3LO</span>
         </div>
         <div class="header-actions">
+          <button id="help-btn" class="btn-secondary" title="Istruzioni">?</button>
           <button id="import-project" class="btn-secondary">↓ Import</button>
           <input type="file" id="import-file" accept=".json" style="display: none;">
           <button id="new-project" class="btn-primary">+ New Project</button>
@@ -27,3 +28,64 @@
     <script type="module" src="./import_handler.js"></script>
   </body>
 </html>
+
+<!-- Modal Istruzioni -->
+<div id="help-modal" class="modal" style="display: none;">
+  <div class="modal-content">
+    <span class="close-btn" id="close-help">&times;</span>
+    <h2>🎯 Istruzioni 3LO</h2>
+    <h3>Tasti Scorciatoia</h3>
+    <ul>
+      <li><strong>Ctrl + Scroll</strong> → Zoom in/out board</li>
+      <li><strong>Ctrl + +/-</strong> → Zoom pulsanti</li>
+      <li><strong>Invio</strong> → Crea nuova scheda</li>
+      <li><strong>Maiusc + Invio</strong> → A capo nella scheda</li>
+      <li><strong>Doppio click</strong> → Modifica titolo progetto</li>
+      <li><strong>Drag & Drop</strong> → Sposta schede tra liste</li>
+    </ul>
+    <h3>Operazioni</h3>
+    <ul>
+      <li><strong>Import</strong> → Carica progetto da file JSON</li>
+      <li><strong>New Project</strong> → Crea nuovo progetto vuoto</li>
+      <li><strong>Icona 🗑️</strong> → Elimina scheda</li>
+    </ul>
+    <p style="margin-top: 20px; font-size: 0.9em; color: #666;">
+      💡 <em>Per ulteriori informazioni, consulta la documentazione nel menu ?</em>
+    </p>
+  </div>
+</div>
+
+<!-- CSS Modal -->
+<style>
+.modal { display: none; position: fixed; z-index: 1000; left: 0; top: 0; width: 100%; height: 100%; background-color: rgba(0,0,0,0.5); }
+.modal-content { background-color: #fefefe; margin: 5% auto; padding: 20px; border-radius: 8px; width: 80%; max-width: 600px; box-shadow: 0 4px 20px rgba(0,0,0,0.3); max-height: 80vh; overflow-y: auto; }
+.close-btn { color: #aaa; float: right; font-size: 28px; font-weight: bold; cursor: pointer; }
+.close-btn:hover { color: #000; }
+</style>
+<!-- Script Help Modal -->
+<script>
+  document.addEventListener('DOMContentLoaded', function() {
+    const helpBtn = document.getElementById('help-btn');
+    const helpModal = document.getElementById('help-modal');
+    const closeHelp = document.getElementById('close-help');
+    
+    if (helpBtn && helpModal) {
+      helpBtn.addEventListener('click', () => {
+        helpModal.style.display = 'block';
+      });
+    }
+    
+    if (closeHelp && helpModal) {
+      closeHelp.addEventListener('click', () => {
+        helpModal.style.display = 'none';
+      });
+    }
+    
+    // Chiudi cliccando fuori dal modal
+    window.addEventListener('click', (e) => {
+      if (e.target === helpModal) {
+        helpModal.style.display = 'none';
+      }
+    });
+  });
+</script>
