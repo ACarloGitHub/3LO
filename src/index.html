@@ -33,9 +33,61 @@
     <script type="module" src="./home.js"></script>
     <script type="module" src="./import_handler.js"></script>
     <script type="module" src="./template_ai.js"></script>
-    <script type="module" src="./logger.js"></script>
+    <script type="module" src="./settings.js"></script>
   </body>
 </html>
+
+<!-- Settings Sidebar -->
+<div id="settings-sidebar" class="settings-sidebar">
+  <div class="settings-header">
+    <h3>⚙️ Settings</h3>
+    <button id="close-settings" class="close-settings-btn">&times;</button>
+  </div>
+  
+  <div class="settings-content">
+    <div class="settings-section">
+      <h4>🎨 Colors</h4>
+      
+      <div class="color-setting">
+        <label>Header</label>
+        <input type="color" id="color-header" value="#1a1a2e">
+      </div>
+      
+      <div class="color-setting">
+        <label>Background</label>
+        <input type="color" id="color-background" value="#16213e">
+      </div>
+      
+      <div class="color-setting">
+        <label>Footer</label>
+        <input type="color" id="color-footer" value="#0f0f23">
+      </div>
+      
+      <div class="color-setting">
+        <label>Project Cards</label>
+        <input type="color" id="color-projects" value="#6366f1">
+      </div>
+      
+      <div class="color-setting">
+        <label>Columns</label>
+        <input type="color" id="color-columns" value="#6366f1">
+      </div>
+      
+      <div class="color-setting">
+        <label>Cards</label>
+        <input type="color" id="color-cards" value="#4c51bf">
+      </div>
+      
+      <div class="color-setting">
+        <label>Primary Buttons</label>
+        <input type="color" id="color-buttons" value="#6366f1">
+      </div>
+    </div>
+    
+    <button id="reset-colors" class="reset-colors-btn">↺ Reset to Default</button>
+  </div>
+</div>
+<div id="settings-overlay" class="settings-overlay"></div>
 
 <!-- Help Modal -->
 <div id="help-modal" class="modal" style="display: none;">
@@ -45,7 +97,7 @@
     
     <div style="background: #f0f0f0; padding: 15px; border-radius: 8px; margin-bottom: 20px;">
       <h3>🤖 AI Template</h3>
-      <p>Click the <strong>"AI Template"</strong> button at the bottom right to download a sample JSON file.</p>
+      <p>Click the <strong>"AI Template"</strong> button at the bottom right to download a sample JSON file. </p>
       <p>This file contains the correct structure to create 3LO projects. You can show it to an AI (Claude, ChatGPT, etc.) and ask them to create a custom project for you!</p>
       <button id="copy-prompt-btn" style="background: #6366f1; color: white; border: none; padding: 8px 16px; border-radius: 6px; cursor: pointer; margin-top: 10px;">📋 Copy AI Prompt</button>
       <p id="copy-feedback" style="color: green; font-size: 0.85em; margin-top: 5px; display: none;">✅ Copied to clipboard!</p>
@@ -75,7 +127,6 @@
 .close-btn { color: #aaa; float: right; font-size: 28px; font-weight: bold; cursor: pointer; }
 .close-btn:hover { color: #000; }
 </style>
-
 <script>
   document.addEventListener('DOMContentLoaded', function() {
     const helpBtn = document.getElementById('help-btn');
@@ -175,56 +226,3 @@ INSTRUCTIONS:
     }
   });
 </script>
-<!-- Settings Sidebar -->
-<div id="settings-sidebar" class="settings-sidebar">
-  <div class="settings-header">
-    <h3>⚙️ Settings</h3>
-    <button id="close-settings" class="close-settings-btn">&times;</button>
-  </div>
-  
-  <div class="settings-content">
-    <div class="settings-section">
-      <h4>🎨 Colors</h4>
-      
-      <div class="color-setting">
-        <label>Header</label>
-        <input type="color" id="color-header" value="#1a1a2e">
-      </div>
-      
-      <div class="color-setting">
-        <label>Background</label>
-        <input type="color" id="color-background" value="#16213e">
-      </div>
-      
-      <div class="color-setting">
-        <label>Footer</label>
-        <input type="color" id="color-footer" value="#0f0f23">
-      </div>
-      
-      <div class="color-setting">
-        <label>Project Cards</label>
-        <input type="color" id="color-projects" value="#6366f1">
-      </div>
-      
-      <div class="color-setting">
-        <label>Columns</label>
-        <input type="color" id="color-columns" value="#6366f1">
-      </div>
-      
-      <div class="color-setting">
-        <label>Cards</label>
-        <input type="color" id="color-cards" value="#4c51bf">
-      
-      <div class="color-setting">
-        <label>Primary Buttons</label>
-        <input type="color" id="color-buttons" value="#6366f1">
-      </div>
-      </div>
-    </div>
-    
-    <button id="reset-colors" class="reset-colors-btn">↺ Reset to Default</button>
-  </div>
-</div>
-<div id="settings-overlay" class="settings-overlay"></div>
-
-<script src="./settings.js"></script>
