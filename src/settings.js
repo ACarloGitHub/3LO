@@ -8,7 +8,8 @@ const DEFAULT_COLORS = {
   footer: '#0f0f23',
   projects: '#6366f1',
   columns: '#6366f1',
-  cards: '#4c51bf'
+  cards: '#4c51bf',
+  buttons: '#6366f1'
 };
 
 // Current colors (loaded from localStorage or defaults)
@@ -66,7 +67,7 @@ function closeSettings() {
 
 function initColorPickers() {
   const colorIds = ['color-header', 'color-background', 'color-footer', 
-                   'color-projects', 'color-columns', 'color-cards'];
+                   'color-projects', 'color-columns', 'color-cards', 'color-buttons'];
 
   colorIds.forEach(id => {
     const picker = document.getElementById(id);
@@ -113,6 +114,7 @@ function applyColors() {
   root.style.setProperty('--color-projects', currentColors.projects);
   root.style.setProperty('--color-columns', currentColors.columns);
   root.style.setProperty('--color-cards', currentColors.cards);
+  root.style.setProperty('--color-buttons', currentColors.buttons);
 
   // Apply to specific elements
   const header = document.querySelector('.header');
@@ -147,6 +149,17 @@ function applyColors() {
   document.querySelectorAll('.card').forEach(card => {
     card.style.background = hexToRgba(currentColors.cards, 0.2);
     card.style.border = `1px solid ${hexToRgba(currentColors.cards, 0.3)}`;
+  });
+  // Apply to primary buttons
+  document.querySelectorAll(".btn-primary, .footer-btn").forEach(btn => {
+    btn.style.background = `linear-gradient(135deg, ${currentColors.buttons} 0%, ${hexToRgba(currentColors.buttons, 0.8)} 100%)`;
+    btn.style.border = `1px solid ${hexToRgba(currentColors.buttons, 0.5)}`;
+  });
+
+  // Secondary buttons stay transparent
+  document.querySelectorAll(".btn-secondary:not(.footer-btn)").forEach(btn => {
+    btn.style.background = "rgba(255, 255, 255, 0.1)";
+    btn.style.border = "1px solid rgba(255, 255, 255, 0.2)";
   });
 }
 
