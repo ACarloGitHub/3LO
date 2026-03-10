@@ -17,6 +17,7 @@
           <button id="import-project" class="btn-secondary">↓ Import</button>
           <input type="file" id="import-file" accept=".json" style="display: none;">
           <button id="new-project" class="btn-primary">+ New Project</button>
+          <button id="settings-btn" class="btn-secondary" title="Settings">⚙️</button>
         </div>
       </header>
       <div class="projects-container" id="projects"></div>
@@ -174,3 +175,51 @@ INSTRUCTIONS:
     }
   });
 </script>
+<!-- Settings Sidebar -->
+<div id="settings-sidebar" class="settings-sidebar">
+  <div class="settings-header">
+    <h3>⚙️ Settings</h3>
+    <button id="close-settings" class="close-settings-btn">&times;</button>
+  </div>
+  
+  <div class="settings-content">
+    <div class="settings-section">
+      <h4>🎨 Colors</h4>
+      
+      <div class="color-setting">
+        <label>Header</label>
+        <input type="color" id="color-header" value="#1a1a2e">
+      </div>
+      
+      <div class="color-setting">
+        <label>Background</label>
+        <input type="color" id="color-background" value="#16213e">
+      </div>
+      
+      <div class="color-setting">
+        <label>Footer</label>
+        <input type="color" id="color-footer" value="#0f0f23">
+      </div>
+      
+      <div class="color-setting">
+        <label>Project Cards</label>
+        <input type="color" id="color-projects" value="#6366f1">
+      </div>
+      
+      <div class="color-setting">
+        <label>Columns</label>
+        <input type="color" id="color-columns" value="#6366f1">
+      </div>
+      
+      <div class="color-setting">
+        <label>Cards</label>
+        <input type="color" id="color-cards" value="#4c51bf">
+      </div>
+    </div>
+    
+    <button id="reset-colors" class="reset-colors-btn">↺ Reset to Default</button>
+  </div>
+</div>
+<div id="settings-overlay" class="settings-overlay"></div>
+
+<script src="./settings.js"></script>
