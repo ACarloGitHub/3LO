@@ -14,7 +14,6 @@
           <span class="logo-text">3LO</span>
         </div>
         <div class="header-actions">
-          <button id="help-btn" class="btn-secondary" title="Istruzioni">?</button>
           <button id="import-project" class="btn-secondary">↓ Import</button>
           <input type="file" id="import-file" accept=".json" style="display: none;">
           <button id="new-project" class="btn-primary">+ New Project</button>
@@ -22,10 +21,18 @@
       </header>
       <div class="projects-container" id="projects"></div>
     </div>
+
+    <!-- Footer con Template AI e Help -->
+    <div class="app-footer">
+      <button id="template-ai-btn" class="footer-btn">Template AI</button>
+      <button id="help-btn" class="footer-btn" title="Istruzioni">?</button>
+    </div>
+
     <script src="https://cdn.jsdelivr.net/npm/sortablejs@latest/Sortable.min.js"></script>
     <script type="module" src="./diagnostic.js"></script>
     <script type="module" src="./home.js"></script>
     <script type="module" src="./import_handler.js"></script>
+    <script type="module" src="./template_ai.js"></script>
   </body>
 </html>
 
@@ -34,6 +41,16 @@
   <div class="modal-content">
     <span class="close-btn" id="close-help">&times;</span>
     <h2>🎯 Istruzioni 3LO</h2>
+    
+    <!-- Sezione Template AI -->
+    <div style="background: #f0f0f0; padding: 15px; border-radius: 8px; margin-bottom: 20px;">
+      <h3>🤖 Template AI</h3>
+      <p>Clicca sul pulsante <strong>"Template AI"</strong> in basso a destra per scaricare un file JSON di esempio. </p>
+      <p>Questo file contiene la struttura corretta per creare progetti 3LO. Puoi mostrarlo a un'AI (Claude, ChatGPT, ecc.) e chiedergli di creare uno scaletta personalizzata per te!</p>
+      <button id="copy-prompt-btn" style="background: #6366f1; color: white; border: none; padding: 8px 16px; border-radius: 6px; cursor: pointer; margin-top: 10px;">📋 Copia prompt per AI</button>
+      <p id="copy-feedback" style="color: green; font-size: 0.85em; margin-top: 5px; display: none;">✅ Copiato negli appunti!</p>
+    </div>
+
     <h3>Tasti Scorciatoia</h3>
     <ul>
       <li><strong>Ctrl + Scroll</strong> → Zoom in/out board</li>
@@ -49,9 +66,6 @@
       <li><strong>New Project</strong> → Crea nuovo progetto vuoto</li>
       <li><strong>Icona 🗑️</strong> → Elimina scheda</li>
     </ul>
-    <p style="margin-top: 20px; font-size: 0.9em; color: #666;">
-      💡 <em>Per ulteriori informazioni, consulta la documentazione nel menu ?</em>
-    </p>
   </div>
 </div>
 
@@ -62,13 +76,17 @@
 .close-btn { color: #aaa; float: right; font-size: 28px; font-weight: bold; cursor: pointer; }
 .close-btn:hover { color: #000; }
 </style>
-<!-- Script Help Modal -->
+
+<!-- Script Help Modal + Prompt Copiabile -->
 <script>
   document.addEventListener('DOMContentLoaded', function() {
     const helpBtn = document.getElementById('help-btn');
     const helpModal = document.getElementById('help-modal');
     const closeHelp = document.getElementById('close-help');
+    const copyPromptBtn = document.getElementById('copy-prompt-btn');
+    const copyFeedback = document.getElementById('copy-feedback');
     
+    // Modal Help
     if (helpBtn && helpModal) {
       helpBtn.addEventListener('click', () => {
         helpModal.style.display = 'block';
@@ -78,14 +96,84 @@
     if (closeHelp && helpModal) {
       closeHelp.addEventListener('click', () => {
         helpModal.style.display = 'none';
+        if (copyFeedback) copyFeedback.style.display = 'none';
       });
     }
     
-    // Chiudi cliccando fuori dal modal
     window.addEventListener('click', (e) => {
       if (e.target === helpModal) {
         helpModal.style.display = 'none';
+        if (copyFeedback) copyFeedback.style.display = 'none';
       }
     });
+
+    // Copia prompt per AI
+    const promptTemplate = `Sei un assistente che crea progetti per 3LO (un Kanban board).
+
+FORMATO JSON RICHIESTO:
+{
+  "_documentation": {
+    "format": "3LO Project Export v1.0",
+    "description": "Struttura JSON per importazione in 3LO",
+    "fields": {
+      "version": "Versione formato (stringa, es: '1.0')",
+      "project": {
+        "id": "ID univoco progetto (stringa)",
+        "name": "Nome visualizzato (stringa)",
+        "created": "Timestamp creazione (numero, epoch ms)"
+      },
+      "board": "Array colonne, ognuna con {id, title, cards: [{id, text}]}",
+      "cards": "Oggetto metadata card (può essere vuoto {})",
+      "exportedAt": "ISO 8601 timestamp export"
+    },
+    "regole": [
+      "board è array: [{id, title, cards: [...]}]",
+      "cards dentro board ha solo {id, text}",
+      "cards (root) è oggetto metadata: {cardId: {created, modified, note}}",
+      "id progetto univoco, senza spazi",
+      "text supporta emoji e unicode"
+    ]
+  },
+  "version": "1.0",
+  "project": {
+    "id": "id-unico-progetto",
+    "name": "Nome Progetto",
+    "created": 1234567890
+  },
+  "board": [
+    {
+      "id": "col-1",
+      "title": "Titolo Colonna",
+      "cards": [
+        {"id": "card-1", "text": "Testo scheda"}
+      ]
+    }
+  ],
+  "cards": {},
+  "exportedAt": "2026-03-10T10:00:00Z"
+}
+
+ISTRUZIONI:
+- Chiedimi il nome del progetto e lo scopo
+- Crea 3-5 colonne appropriate per il workflow
+- Inserisci 2-3 schede per colonna come esempio
+- Usa emoji nelle colonne (🔴 🟡 🟢 ✅ 🤖 🎨 ecc.)
+- Includi sempre il campo "_documentation"
+- Gli ID devono essere univoci (usa timestamp o nanoid)`;
+
+    if (copyPromptBtn) {
+      copyPromptBtn.addEventListener('click', async () => {
+        try {
+          await navigator.clipboard.writeText(promptTemplate);
+          copyFeedback.style.display = 'block';
+          setTimeout(() => {
+            copyFeedback.style.display = 'none';
+          }, 3000);
+        } catch (err) {
+          console.error('Errore copia:', err);
+          alert('Errore nella copia. Seleziona e copia manualmente dalla console.');
+        }
+      });
+    }
   });
 </script>

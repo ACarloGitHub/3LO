@@ -1,0 +1,330 @@
+{
+  "_documentation": {
+    "format": "3LO Project Export v1.0",
+    "description": "Struttura JSON per importazione in 3LO",
+    "fields": {
+      "version": "Versione formato (stringa, es: '1.0')",
+      "project": {
+        "id": "ID univoco progetto (stringa)",
+        "name": "Nome visualizzato (stringa)",
+        "created": "Timestamp creazione (numero, epoch ms)"
+      },
+      "board": "Array colonne, ognuna con {id, title, cards: [{id, text}]}",
+      "cards": "Oggetto metadata card (può essere vuoto {})",
+      "exportedAt": "ISO 8601 timestamp export"
+    },
+    "regole": [
+      "board è array: [{id, title, cards: [...]}]",
+      "cards dentro board ha solo {id, text}",
+      "cards (root) è oggetto metadata: {cardId: {created, modified, note}}",
+      "id progetto univoco, senza spazi",
+      "text supporta emoji e unicode"
+    ]
+  },
+  "version": "1.0",
+  "project": {
+    "id": "scaletta-2026-03-07-progetti-multipli",
+    "name": "Aura & CArlo - martedì",
+    "created": 1741342800000
+  },
+  "board": [
+    {
+      "id": "alta",
+      "title": "🔴 PRIORITÀ ALTA",
+      "cards": []
+    },
+    {
+      "id": "media",
+      "title": "🟡 PRIORITÀ MEDIA",
+      "cards": [
+        {
+          "id": "1772990452911",
+          "text": "AnythingLLM - studio della app e configurazione"
+        },
+        {
+          "id": "1773042906458",
+          "text": "a fine giornata o domani, fare il backup della memoria di Aura e di 3LO perchè domani pomeriggio vorrei andare a Torre."
+        },
+        {
+          "id": "1773062017881",
+          "text": "Creare script per backup - con le stesse funzionalità degli script per Aura backup - per copaw"
+        },
+        {
+          "id": "1773070481524",
+          "text": "https://github.com/HKUDS/CLI-Anything\nStudiare se questo è utile e cosa fa"
+        },
+        {
+          "id": "1773081349237",
+          "text": "Controllare\nhttps://github.com/HKUDS/CLI-Anything\nhttps://github.com/antonmedv/textarea"
+        }
+      ]
+    },
+    {
+      "id": "bassa",
+      "title": "🟢 PRIORITÀ BASSA",
+      "cards": [
+        {
+          "id": "3lo-1",
+          "text": "🎨 3LO: Vedi progetto"
+        },
+        {
+          "id": "1772958969300",
+          "text": "lavorare un po' su 3LO"
+        },
+        {
+          "id": "1772958978938",
+          "text": "organizzare su 3LO gli altri progetti"
+        },
+        {
+          "id": "1773043426108",
+          "text": "Risolvere il problema dello stop dei dowload da parte di steam dopo modifica rete"
+        },
+        {
+          "id": "1773043556816",
+          "text": "Configurazione PC fisso con GTX 1080 per openclow e altro su ubuntu"
+        }
+      ]
+    },
+    {
+      "id": "1772872475501",
+      "title": "In esecuzione",
+      "cards": []
+    },
+    {
+      "id": "fatto",
+      "title": "✅ FATTO",
+      "cards": [
+        {
+          "id": "1772958957110",
+          "text": "configurare lm studio in modo da scaricare i modelli su altri HDs, come per ollama al punto 4"
+        },
+        {
+          "id": "1772958948738",
+          "text": "spostare i modelli di ollama su altri HDs, discutendo con te se è meglio una partizione ext4 o bastano le ntfs che ho già"
+        },
+        {
+          "id": "1773042866847",
+          "text": "controllare questo link https://github.com/googleworkspace/cli\nPer capire se il fatto che google abbia messo queste risorse open source può aiutarci a comunicare meglio con mail, documenti, drive, calendario ecc. attraverso nuovi script e tools"
+        },
+        {
+          "id": "1772958930412",
+          "text": "capire se e come ottimizzare la vr in ubuntu"
+        },
+        {
+          "id": "1772958939554",
+          "text": "pulire la home da tutto ciò che non serve, o organizzando meglio i files o anche eliminandone alcuni"
+        },
+        {
+          "id": "1772958921998",
+          "text": "capire come ottimizzare la rete per usare i quest3 senza stuttering con ubuntu."
+        },
+        {
+          "id": "steam-1",
+          "text": "🎮 Fix Steam Ubuntu: RISOLTO bug percorsi installazione personalizzati"
+        },
+        {
+          "id": "copaw-2",
+          "text": "📋 Copaw: configurazione file AGENTS.md, SOUL.md, USER.md, TOOLS.md con Aura"
+        },
+        {
+          "id": "copaw-1",
+          "text": "🔧 Setup Copaw: installazione ambiente AI alternativo"
+        },
+        {
+          "id": "himalaya-2",
+          "text": "📧 Himalaya: setup su Copaw e test invio/ricezione"
+        },
+        {
+          "id": "himalaya-1",
+          "text": "📧 Configurazione Himalaya: client email TUI su OpenClaw"
+        },
+        {
+          "id": "copaw-3",
+          "text": "🚀 Analisi Copaw: mappatura tool, skills, integrazione Google"
+        },
+        {
+          "id": "boot-1",
+          "text": "⚙️ Configurazione boot manager: cambiato GRUB_DEFAULT da 1 a 0"
+        },
+        {
+          "id": "1772876359879",
+          "text": "📅 Eventi calendario: reminder CoPaw (7 apr) e rinnovi Google (settimanali)"
+        },
+        {
+          "id": "email-1",
+          "text": "📧 Test email: invio mail da OpenClaw a Gmail (test superato)"
+        },
+        {
+          "id": "1772993453988",
+          "text": "Aggiunto il programma ALVR per streaming vr con steamVR."
+        },
+        {
+          "id": "1773050206289",
+          "text": "Creati e migliorati gli scripts per backup e restore di Aura, 3LO e script di Openclaw"
+        },
+        {
+          "id": "1773052378565",
+          "text": "creato nuovo tool con GWS per tutti i prodotti Google"
+        }
+      ]
+    },
+    {
+      "id": "bug",
+      "title": "❤️ BUG DELLA NOSTALGIA",
+      "cards": [
+        {
+          "id": "bug-1",
+          "text": "Doppia finestra import identiche e sovrapposte"
+        }
+      ]
+    }
+  ],
+  "cards": {
+    "copaw-1": {
+      "created": 1741342800000,
+      "modified": 1772882166370,
+      "note": "Installazione Copaw come backup OpenClaw. Redondanza se OpenClaw diventa a pagamento. Serve come muletto."
+    },
+    "copaw-2": {
+      "created": 1741342800000,
+      "modified": 1772882141671,
+      "note": "Configurare Aura su Copaw. Memoria personale copiata MA: niente memoria profonda senza API key. Meglio usare OpenClaw per ora."
+    },
+    "himalaya-1": {
+      "created": 1741342800000,
+      "modified": 1772882231121,
+      "note": "Setup Himalaya. Configurazione account carlopissipissibaubaumiaociao@gmail.com e carlopirasmail@gmail.com. Test lettura email."
+    },
+    "himalaya-2": {
+      "created": 1741342800000,
+      "modified": 1772882181370,
+      "note": "Setup Himalaya su Copaw per parità funzionalità. Funziona su entrambe le piattaforme."
+    },
+    "copaw-3": {
+      "created": 1741342800000,
+      "modified": 1772882266856,
+      "note": "Analisi Copaw. ABBANDONATA: memoria a lungo termine è a pagamento con API. Non ancora maturo come OpenClaw."
+    },
+    "steam-1": {
+      "created": 1741342800000,
+      "modified": 1772890380000,
+      "note": "RISOLTO! Causa: xdg-desktop-portal-gnome in conflitto con Steam CEF. Soluzione: rimosso xdg-desktop-portal-gnome, tenuto solo xdg-desktop-portal-gtk. Aggiunto exec al mount di /dev/sdd2 (Unreal) in /etc/fstab. Steam ora vede dischi NTFS e può aggiungere librerie."
+    },
+    "3lo-1": {
+      "created": 1741342800000,
+      "modified": 1772872404593,
+      "note": "Help in-app con elenco tasti scorciatoia."
+    },
+    "bug-1": {
+      "created": 1741342800000,
+      "modified": 1741342800000,
+      "note": "Compare una doppia finestra di importazione avvenuta con successo. Questo bug testimonia il nostro amore ❤️"
+    },
+    "1772876359879": {
+      "created": 1772876359879,
+      "modified": 1772882166370,
+      "note": "Cambiato GRUB_DEFAULT da 1 a 0 per avviare Ubuntu normale direttamente."
+    },
+    "boot-1": {
+      "created": 1772890380000,
+      "modified": 1772890380000,
+      "note": "Configurazione boot manager: cambiato GRUB_DEFAULT da 1 a 0. Ora avvia Ubuntu normale, non più submenu Advanced Options."
+    },
+    "email-1": {
+      "created": 1772890380000,
+      "modified": 1772890380000,
+      "note": "Invio email di test da OpenClaw a carlopissipissibaubaumiaociao@gmail.com. Token Google rigenerato, funziona."
+    },
+    "1772958921998": {
+      "created": 1772958921998,
+      "modified": 1772958921998,
+      "note": "✅ RISOLTO 2026-03-08! Configurazione dual-interface isolata (come Windows): PCI → Internet (DHCP + gateway), USB → Quest 3 (IP statico 192.168.1.50, no gateway). Route specifica 192.168.1.32/32 forzata su USB. DNS Cloudflare."
+    },
+    "1772958930412": {
+      "created": 1772958930412,
+      "modified": 1772958930412,
+      "note": "✅ RISOLTO 2026-03-08! Driver NVIDIA 590 → 580.126.20 (supera req. 575.64.5). SteamVR BETA → STABLE. Errore -203 risolto, stuttering quasi zero. Cuffie Quest 3 funzionanti su Ubuntu! Pionieri VR Linux 🇮🇹"
+    },
+    "1772958939554": {
+      "created": 1772958939555,
+      "modified": 1772958939555,
+      "note": "✅ FATTO 2026-03-08! Liberati ~15GB: build 3LO (-8.8GB), cache pip (-3.5GB), cache Chrome (-1.5GB), Huggingface 2023, steam-latest.deb, file sparsi in Documenti/, log in progetti/3lo/"
+    },
+    "1772958948738": {
+      "created": 1772958948738,
+      "modified": 1772958948738,
+      "note": "🔄 PIANIFICATO 2026-03-09. Piano: modello punta su NVMe Ubuntu (123GB), altri modelli su HD NTFS (Pandora/AI). Procedure: export OLLAMA_MODELS in ~/.bashrc, verificare modelli esistenti con ollama list."
+    },
+    "1772958957110": {
+      "created": 1772958957110,
+      "modified": 1772958957110,
+      "note": "🔄 PIANIFICATO 2026-03-09. Task: verificare path modelli LM Studio (~/.lmstudio/? ~/.config/lmstudio/?) e opzioni configurazione path. Se non gui, cercare config file o usare symlink."
+    },
+    "1772958969300": {
+      "created": 1772958969300,
+      "modified": 1772958969300,
+      "note": ""
+    },
+    "1772958978938": {
+      "created": 1772958978938,
+      "modified": 1772958978938,
+      "note": ""
+    },
+    "1772990452911": {
+      "created": 1772990452911,
+      "modified": 1772990452911,
+      "note": ""
+    },
+    "1772993453988": {
+      "created": 1772993453988,
+      "modified": 1772993453988,
+      "note": ""
+    },
+    "1773042866847": {
+      "created": 1773042866847,
+      "modified": 1773042866847,
+      "note": ""
+    },
+    "1773042906458": {
+      "created": 1773042906458,
+      "modified": 1773042906458,
+      "note": ""
+    },
+    "1773043426108": {
+      "created": 1773043426108,
+      "modified": 1773043426108,
+      "note": ""
+    },
+    "1773043556816": {
+      "created": 1773043556816,
+      "modified": 1773043556816,
+      "note": ""
+    },
+    "1773050206289": {
+      "created": 1773050206289,
+      "modified": 1773050206289,
+      "note": ""
+    },
+    "1773052378565": {
+      "created": 1773052378565,
+      "modified": 1773052378565,
+      "note": ""
+    },
+    "1773062017881": {
+      "created": 1773062017881,
+      "modified": 1773062017881,
+      "note": ""
+    },
+    "1773070481524": {
+      "created": 1773070481524,
+      "modified": 1773070481524,
+      "note": ""
+    },
+    "1773081349237": {
+      "created": 1773081349237,
+      "modified": 1773081363368,
+      "note": "## 📊 Analisi Link\n\n### 1. **CLI-Anything** (HKUDS)\n**Cosa è:** Un tool che trasforma **qualunque software** in un'interfaccia CLI \"agent-ready\" per AI come Claude Code, Cursor, OpenClaw... 🤖\n\n**Come funziona:**\n- Scansiona il codice sorgente di un'app\n- Genera automaticamente una CLI con comandi\n- Output in **JSON** (perfetto per agenti)\n- Pipeline completa: analisi → design → implementazione → test → publish\n\n**Per te è INTERESSANTE perché:**\n- Potrebbe far parlare 3LO con AI agenti (es. \"aggiungi scheda\", \"sposta task\")\n- Genera wrapper CLI automaticamente senza riscrivere codice\n- Supporta **undo/redo**, REPL interattivo, output JSON strutturato\n\n**Valutazione:** 🟡 **Promettente** — da tenere d'occhio, ma richiede setup\n\n---\n\n### 2. **textarea** (antonmedv)\n**Cosa è:** Un editor di testo **minimalista nel browser** che salva TUTTO nell'URL (hash). 📝\n\n**Come funziona:**\n- Scrivi → il testo si comprime (deflate) → finisce nell'URL\n- Copi/incolli l'URL → hai il tuo documento\n- **Nessun server, nessun database, nessun login**\n- Supporta Markdown, stili CSS custom\n\n**Per te è INTERESSANTE perché:**\n- Potresti usarlo per **note rapide** da condividere con me (basta l'URL)\n- Se vuoi scrivere pensieri veloci senza aprire 3LO\n- Salva locale + URL comprimendo (privacy totale)\n\n**Valutazione:** 🟢 **Utile subito** — prova subito textarea.my\n\n---\n\n## 🎯 Il mio consiglio\n\n| Tool | Utilità per te | Azione |\n|------|---------------|--------|\n| **textarea** | Alta (ora) | Provalo subito per note veloci |\n| **CLI-Anything** | Media (futuro) | Bookmark per estendere 3LO con AI |\n\n\n"
+    }
+  },
+  "exportedAt": "2026-03-10T07:56:02.242Z"
+}
