@@ -10,6 +10,7 @@
     <div class="app">
       <header class="header">
         <button id="back" class="btn-secondary">← Back</button>
+        <button id="settings-btn" class="btn-secondary" title="Settings">⚙️</button>
         <div class="board-title-container">
           <h1 id="board-title" contenteditable="true" spellcheck="false">Board</h1>
         </div>
@@ -83,4 +84,141 @@
 </div>
 <div id="settings-overlay" class="settings-overlay"></div>
 
-<script src="./settings.js"></script>
+<script src="./settings.js"></script><!-- Help Modal -->
+<div id="help-modal" class="modal" style="display: none;">
+  <div class="modal-content">
+    <span class="close-btn" id="close-help">&times;</span>
+    <h2>🎯 3LO Instructions</h2>
+    
+    <div style="background: #f0f0f0; padding: 15px; border-radius: 8px; margin-bottom: 20px;">
+      <h3>🤖 AI Template</h3>
+      <p>Click the <strong>"AI Template"</strong> button at the bottom right to download a sample JSON file.</p>
+      <p>This file contains the correct structure to create 3LO projects. You can show it to an AI (Claude, ChatGPT, etc.) and ask them to create a custom project for you!</p>
+      <button id="copy-prompt-btn" style="background: #6366f1; color: white; border: none; padding: 8px 16px; border-radius: 6px; cursor: pointer; margin-top: 10px;">📋 Copy AI Prompt</button>
+      <p id="copy-feedback" style="color: green; font-size: 0.85em; margin-top: 5px; display: none;">✅ Copied to clipboard!</p>
+    </div>
+
+    <h3>⌨️ Keyboard Shortcuts</h3>
+    <ul>
+      <li><strong>Ctrl + Scroll</strong> → Zoom in/out board</li>
+      <li><strong>Ctrl + +/-</strong> → Zoom buttons</li>
+      <li><strong>Enter</strong> → Create new card</li>
+      <li><strong>Shift + Enter</strong> → New line in card</li>
+      <li><strong>Double click</strong> → Edit project title</li>
+      <li><strong>Drag & Drop</strong> → Move cards between lists</li>
+    </ul>
+    <h3>⚙️ Operations</h3>
+    <ul>
+      <li><strong>Import</strong> → Load project from JSON file</li>
+      <li><strong>New Project</strong> → Create empty project</li>
+      <li><strong>🗑️ Icon</strong> → Delete card</li>
+    </ul>
+  </div>
+</div>
+
+<style>
+.modal { display: none; position: fixed; z-index: 1000; left: 0; top: 0; width: 100%; height: 100%; background-color: rgba(0,0,0,0.5); }
+.modal-content { background-color: #fefefe; color: #333; margin: 5% auto; padding: 20px; border-radius: 8px; width: 80%; max-width: 600px; box-shadow: 0 4px 20px rgba(0,0,0,0.3); max-height: 80vh; overflow-y: auto; }
+.close-btn { color: #aaa; float: right; font-size: 28px; font-weight: bold; cursor: pointer; }
+.close-btn:hover { color: #000; }
+</style>
+
+<script>
+  document.addEventListener('DOMContentLoaded', function() {
+    const helpBtn = document.getElementById('help-btn');
+    const helpModal = document.getElementById('help-modal');
+    const closeHelp = document.getElementById('close-help');
+    const copyPromptBtn = document.getElementById('copy-prompt-btn');
+    const copyFeedback = document.getElementById('copy-feedback');
+    
+    if (helpBtn && helpModal) {
+      helpBtn.addEventListener('click', () => {
+        helpModal.style.display = 'block';
+      });
+    }
+    
+    if (closeHelp && helpModal) {
+      closeHelp.addEventListener('click', () => {
+        helpModal.style.display = 'none';
+        if (copyFeedback) copyFeedback.style.display = 'none';
+      });
+    }
+    
+    window.addEventListener('click', (e) => {
+      if (e.target === helpModal) {
+        helpModal.style.display = 'none';
+        if (copyFeedback) copyFeedback.style.display = 'none';
+      }
+    });
+
+    const promptTemplate = `You are an assistant that creates projects for 3LO (a Kanban board).
+
+REQUIRED JSON FORMAT:
+{
+  "_documentation": {
+    "format": "3LO Project Export v1.0",
+    "description": "JSON structure for 3LO import",
+    "fields": {
+      "version": "Format version (string, e.g. '1.0')",
+      "project": {
+        "id": "Unique project ID (string, no spaces)",
+        "name": "Display name (string)",
+        "created": "Creation timestamp (number, epoch ms)"
+      },
+      "board": "Array of columns: {id, title, cards: [{id, text}]}",
+      "cards": "Card metadata object: {cardId: {created, modified, note}}",
+      "exportedAt": "ISO 8601 export timestamp"
+    },
+    "rules": [
+      "board is array: [{id, title, cards: [...]}]",
+      "cards inside board have {id, text} only",
+      "cards (root) is metadata: {cardId: {created, modified, note}}",
+      "project ID must be unique, no spaces",
+      "text supports emoji and unicode"
+    ]
+  },
+  "version": "1.0",
+  "project": {
+    "id": "unique-project-id",
+    "name": "Project Name",
+    "created": 1234567890
+  },
+  "board": [
+    {
+      "id": "col-1",
+      "title": "Column Title",
+      "cards": [
+        {"id": "card-1", "text": "Card text"}
+      ]
+    }
+  ],
+  "cards": {},
+  "exportedAt": "2026-03-10T10:00:00Z"
+}
+
+INSTRUCTIONS:
+- Ask me for the project name and purpose
+- Create 3-5 appropriate columns for the workflow
+- Add 2-3 sample cards per column
+- Use emojis in columns (🔴 🟡 🟢 ✅ 🤖 🎨 etc.)
+- Always include the "_documentation" field
+- IDs must be unique (use timestamp or nanoid)`;
+
+    if (copyPromptBtn) {
+      copyPromptBtn.addEventListener('click', async () => {
+        try {
+          await navigator.clipboard.writeText(promptTemplate);
+          if (copyFeedback) {
+            copyFeedback.style.display = 'block';
+            setTimeout(() => {
+              copyFeedback.style.display = 'none';
+            }, 3000);
+          }
+        } catch (err) {
+          console.error('Copy error:', err);
+          alert('Copy failed. Check console.');
+        }
+      });
+    }
+  });
+</script>
