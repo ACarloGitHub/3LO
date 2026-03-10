@@ -22,9 +22,10 @@
       <div class="projects-container" id="projects"></div>
     </div>
 
+    <!-- Footer con Template AI e Help -->
     <div class="app-footer">
-      <button id="template-ai-btn" class="footer-btn">AI Template</button>
-      <button id="help-btn" class="footer-btn" title="Instructions">Help</button>
+      <button id="template-ai-btn" class="footer-btn">Template AI</button>
+      <button id="help-btn" class="footer-btn" title="Istruzioni">?</button>
     </div>
 
     <script src="https://cdn.jsdelivr.net/npm/sortablejs@latest/Sortable.min.js"></script>
@@ -32,42 +33,43 @@
     <script type="module" src="./home.js"></script>
     <script type="module" src="./import_handler.js"></script>
     <script type="module" src="./template_ai.js"></script>
-    <script type="module" src="./logger.js"></script>
   </body>
 </html>
 
-<!-- Help Modal -->
+<!-- Modal Istruzioni -->
 <div id="help-modal" class="modal" style="display: none;">
   <div class="modal-content">
     <span class="close-btn" id="close-help">&times;</span>
-    <h2>🎯 3LO Instructions</h2>
+    <h2>🎯 Istruzioni 3LO</h2>
     
+    <!-- Sezione Template AI -->
     <div style="background: #f0f0f0; padding: 15px; border-radius: 8px; margin-bottom: 20px;">
-      <h3>🤖 AI Template</h3>
-      <p>Click the <strong>"AI Template"</strong> button at the bottom right to download a sample JSON file.</p>
-      <p>This file contains the correct structure to create 3LO projects. You can show it to an AI (Claude, ChatGPT, etc.) and ask them to create a custom project for you!</p>
-      <button id="copy-prompt-btn" style="background: #6366f1; color: white; border: none; padding: 8px 16px; border-radius: 6px; cursor: pointer; margin-top: 10px;">📋 Copy AI Prompt</button>
-      <p id="copy-feedback" style="color: green; font-size: 0.85em; margin-top: 5px; display: none;">✅ Copied to clipboard!</p>
+      <h3>🤖 Template AI</h3>
+      <p>Clicca sul pulsante <strong>"Template AI"</strong> in basso a destra per scaricare un file JSON di esempio. </p>
+      <p>Questo file contiene la struttura corretta per creare progetti 3LO. Puoi mostrarlo a un'AI (Claude, ChatGPT, ecc.) e chiedergli di creare uno scaletta personalizzata per te!</p>
+      <button id="copy-prompt-btn" style="background: #6366f1; color: white; border: none; padding: 8px 16px; border-radius: 6px; cursor: pointer; margin-top: 10px;">📋 Copia prompt per AI</button>
+      <p id="copy-feedback" style="color: green; font-size: 0.85em; margin-top: 5px; display: none;">✅ Copiato negli appunti!</p>
     </div>
 
-    <h3>⌨️ Keyboard Shortcuts</h3>
+    <h3>Tasti Scorciatoia</h3>
     <ul>
       <li><strong>Ctrl + Scroll</strong> → Zoom in/out board</li>
-      <li><strong>Ctrl + +/-</strong> → Zoom buttons</li>
-      <li><strong>Enter</strong> → Create new card</li>
-      <li><strong>Shift + Enter</strong> → New line in card</li>
-      <li><strong>Double click</strong> → Edit project title</li>
-      <li><strong>Drag & Drop</strong> → Move cards between lists</li>
+      <li><strong>Ctrl + +/-</strong> → Zoom pulsanti</li>
+      <li><strong>Invio</strong> → Crea nuova scheda</li>
+      <li><strong>Maiusc + Invio</strong> → A capo nella scheda</li>
+      <li><strong>Doppio click</strong> → Modifica titolo progetto</li>
+      <li><strong>Drag & Drop</strong> → Sposta schede tra liste</li>
     </ul>
-    <h3>⚙️ Operations</h3>
+    <h3>Operazioni</h3>
     <ul>
-      <li><strong>Import</strong> → Load project from JSON file</li>
-      <li><strong>New Project</strong> → Create empty project</li>
-      <li><strong>🗑️ Icon</strong> → Delete card</li>
+      <li><strong>Import</strong> → Carica progetto da file JSON</li>
+      <li><strong>New Project</strong> → Crea nuovo progetto vuoto</li>
+      <li><strong>Icona 🗑️</strong> → Elimina scheda</li>
     </ul>
   </div>
 </div>
 
+<!-- CSS Modal -->
 <style>
 .modal { display: none; position: fixed; z-index: 1000; left: 0; top: 0; width: 100%; height: 100%; background-color: rgba(0,0,0,0.5); }
 .modal-content { background-color: #fefefe; color: #333; margin: 5% auto; padding: 20px; border-radius: 8px; width: 80%; max-width: 600px; box-shadow: 0 4px 20px rgba(0,0,0,0.3); max-height: 80vh; overflow-y: auto; }
@@ -75,6 +77,7 @@
 .close-btn:hover { color: #000; }
 </style>
 
+<!-- Script Help Modal + Prompt Copiabile -->
 <script>
   document.addEventListener('DOMContentLoaded', function() {
     const helpBtn = document.getElementById('help-btn');
@@ -83,6 +86,7 @@
     const copyPromptBtn = document.getElementById('copy-prompt-btn');
     const copyFeedback = document.getElementById('copy-feedback');
     
+    // Modal Help
     if (helpBtn && helpModal) {
       helpBtn.addEventListener('click', () => {
         helpModal.style.display = 'block';
@@ -103,44 +107,45 @@
       }
     });
 
-    const promptTemplate = `You are an assistant that creates projects for 3LO (a Kanban board).
+    // Copia prompt per AI
+    const promptTemplate = `Sei un assistente che crea progetti per 3LO (un Kanban board).
 
-REQUIRED JSON FORMAT:
+FORMATO JSON RICHIESTO:
 {
   "_documentation": {
     "format": "3LO Project Export v1.0",
-    "description": "JSON structure for 3LO import",
+    "description": "Struttura JSON per importazione in 3LO",
     "fields": {
-      "version": "Format version (string, e.g. '1.0')",
+      "version": "Versione formato (stringa, es: '1.0')",
       "project": {
-        "id": "Unique project ID (string, no spaces)",
-        "name": "Display name (string)",
-        "created": "Creation timestamp (number, epoch ms)"
+        "id": "ID univoco progetto (stringa)",
+        "name": "Nome visualizzato (stringa)",
+        "created": "Timestamp creazione (numero, epoch ms)"
       },
-      "board": "Array of columns: {id, title, cards: [{id, text}]}",
-      "cards": "Card metadata object: {cardId: {created, modified, note}}",
-      "exportedAt": "ISO 8601 export timestamp"
+      "board": "Array colonne, ognuna con {id, title, cards: [{id, text}]}",
+      "cards": "Oggetto metadata card (può essere vuoto {})",
+      "exportedAt": "ISO 8601 timestamp export"
     },
-    "rules": [
-      "board is array: [{id, title, cards: [...]}]",
-      "cards inside board have {id, text} only",
-      "cards (root) is metadata: {cardId: {created, modified, note}}",
-      "project ID must be unique, no spaces",
-      "text supports emoji and unicode"
+    "regole": [
+      "board è array: [{id, title, cards: [...]}]",
+      "cards dentro board ha solo {id, text}",
+      "cards (root) è oggetto metadata: {cardId: {created, modified, note}}",
+      "id progetto univoco, senza spazi",
+      "text supporta emoji e unicode"
     ]
   },
   "version": "1.0",
   "project": {
-    "id": "unique-project-id",
-    "name": "Project Name",
+    "id": "id-unico-progetto",
+    "name": "Nome Progetto",
     "created": 1234567890
   },
   "board": [
     {
       "id": "col-1",
-      "title": "Column Title",
+      "title": "Titolo Colonna",
       "cards": [
-        {"id": "card-1", "text": "Card text"}
+        {"id": "card-1", "text": "Testo scheda"}
       ]
     }
   ],
@@ -148,27 +153,25 @@ REQUIRED JSON FORMAT:
   "exportedAt": "2026-03-10T10:00:00Z"
 }
 
-INSTRUCTIONS:
-- Ask me for the project name and purpose
-- Create 3-5 appropriate columns for the workflow
-- Add 2-3 sample cards per column
-- Use emojis in columns (🔴 🟡 🟢 ✅ 🤖 🎨 etc.)
-- Always include the "_documentation" field
-- IDs must be unique (use timestamp or nanoid)`;
+ISTRUZIONI:
+- Chiedimi il nome del progetto e lo scopo
+- Crea 3-5 colonne appropriate per il workflow
+- Inserisci 2-3 schede per colonna come esempio
+- Usa emoji nelle colonne (🔴 🟡 🟢 ✅ 🤖 🎨 ecc.)
+- Includi sempre il campo "_documentation"
+- Gli ID devono essere univoci (usa timestamp o nanoid)`;
 
     if (copyPromptBtn) {
       copyPromptBtn.addEventListener('click', async () => {
         try {
           await navigator.clipboard.writeText(promptTemplate);
-          if (copyFeedback) {
-            copyFeedback.style.display = 'block';
-            setTimeout(() => {
-              copyFeedback.style.display = 'none';
-            }, 3000);
-          }
+          copyFeedback.style.display = 'block';
+          setTimeout(() => {
+            copyFeedback.style.display = 'none';
+          }, 3000);
         } catch (err) {
-          console.error('Copy error:', err);
-          alert('Copy failed. Check console.');
+          console.error('Errore copia:', err);
+          alert('Errore nella copia. Seleziona e copia manualmente dalla console.');
         }
       });
     }
