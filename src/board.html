@@ -23,135 +23,134 @@
       </header>
       <div class="board-container"><div class="board" id="board"></div></div>
     </div>
+
+    <!-- Footer -->
+    <div class="app-footer">
+      <button id="template-ai-btn" class="footer-btn">AI Template</button>
+      <button id="help-btn" class="footer-btn" title="Instructions">Help</button>
+    </div>
+
     <script src="https://cdn.jsdelivr.net/npm/sortablejs@latest/Sortable.min.js"></script>
     <script src="./db.js"></script>
     <script src="./board.js"></script>
-  
-    <!-- Footer -->
-    <div class="app-footer"003e
-      <button id="template-ai-btn" class="footer-btn"003eAI Template</button>
-      <button id="help-btn" class="footer-btn" title="Instructions"003eHelp</button>
-    </div>
+    <script type="module" src="./template_ai.js"></script>
+    <script type="module" src="./settings.js"></script>
 
-    <script type="module" src="./template_ai.js"003e</script>
-    <script type="module" src="./settings.js"003e</script>
-  </body>
-</html>
-<!-- Settings Sidebar -->
-<div id="settings-sidebar" class="settings-sidebar">
-  <div class="settings-header">
-    <h3>⚙️ Settings</h3>
-    <button id="close-settings" class="close-settings-btn">&times;</button>
-  </div>
-  
-  <div class="settings-content">
-    <div class="settings-section">
-      <h4>🎨 Colors</h4>
-      
-      <div class="color-setting">
-        <label>Header</label>
-        <input type="color" id="color-header" value="#1a1a2e">
+    <!-- Settings Sidebar -->
+    <div id="settings-sidebar" class="settings-sidebar">
+      <div class="settings-header">
+        <h3>⚙️ Settings</h3>
+        <button id="close-settings" class="close-settings-btn">&times;</button>
       </div>
       
-      <div class="color-setting">
-        <label>Background</label>
-        <input type="color" id="color-background" value="#16213e">
-      </div>
-      
-      <div class="color-setting">
-        <label>Footer</label>
-        <input type="color" id="color-footer" value="#0f0f23">
-      </div>
-      
-      <div class="color-setting">
-        <label>Project Cards</label>
-        <input type="color" id="color-projects" value="#6366f1">
-      </div>
-      
-      <div class="color-setting">
-        <label>Columns</label>
-        <input type="color" id="color-columns" value="#6366f1">
-      </div>
-      
-      <div class="color-setting">
-        <label>Cards</label>
-        <input type="color" id="color-cards" value="#4c51bf">
+      <div class="settings-content">
+        <div class="settings-section">
+          <h4>🎨 Colors</h4>
+          
+          <div class="color-setting">
+            <label>Header</label>
+            <input type="color" id="color-header" value="#1a1a2e">
+          </div>
+          
+          <div class="color-setting">
+            <label>Background</label>
+            <input type="color" id="color-background" value="#16213e">
+          </div>
+          
+          <div class="color-setting">
+            <label>Footer</label>
+            <input type="color" id="color-footer" value="#0f0f23">
+          </div>
+          
+          <div class="color-setting">
+            <label>Project Cards</label>
+            <input type="color" id="color-projects" value="#6366f1">
+          </div>
+          
+          <div class="color-setting">
+            <label>Columns</label>
+            <input type="color" id="color-columns" value="#6366f1">
+          </div>
+          
+          <div class="color-setting">
+            <label>Cards</label>
+            <input type="color" id="color-cards" value="#4c51bf">
+          </div>
+        </div>
+        
+        <button id="reset-colors" class="reset-colors-btn">↺ Reset to Default</button>
       </div>
     </div>
-    
-    <button id="reset-colors" class="reset-colors-btn">↺ Reset to Default</button>
-  </div>
-</div>
-<div id="settings-overlay" class="settings-overlay"></div>
+    <div id="settings-overlay" class="settings-overlay"></div>
 
-<script src="./settings.js"></script><!-- Help Modal -->
-<div id="help-modal" class="modal" style="display: none;">
-  <div class="modal-content">
-    <span class="close-btn" id="close-help">&times;</span>
-    <h2>🎯 3LO Instructions</h2>
-    
-    <div style="background: #f0f0f0; padding: 15px; border-radius: 8px; margin-bottom: 20px;">
-      <h3>🤖 AI Template</h3>
-      <p>Click the <strong>"AI Template"</strong> button at the bottom right to download a sample JSON file.</p>
-      <p>This file contains the correct structure to create 3LO projects. You can show it to an AI (Claude, ChatGPT, etc.) and ask them to create a custom project for you!</p>
-      <button id="copy-prompt-btn" style="background: #6366f1; color: white; border: none; padding: 8px 16px; border-radius: 6px; cursor: pointer; margin-top: 10px;">📋 Copy AI Prompt</button>
-      <p id="copy-feedback" style="color: green; font-size: 0.85em; margin-top: 5px; display: none;">✅ Copied to clipboard!</p>
+    <!-- Help Modal -->
+    <div id="help-modal" class="modal" style="display: none;">
+      <div class="modal-content">
+        <span class="close-btn" id="close-help">&times;</span>
+        <h2>🎯 3LO Instructions</h2>
+        
+        <div style="background: #f0f0f0; padding: 15px; border-radius: 8px; margin-bottom: 20px;">
+          <h3>🤖 AI Template</h3>
+          <p>Click the <strong>"AI Template"</strong> button at the bottom right to download a sample JSON file.</p>
+          <p>This file contains the correct structure to create 3LO projects. You can show it to an AI (Claude, ChatGPT, etc.) and ask them to create a custom project for you!</p>
+          <button id="copy-prompt-btn" style="background: #6366f1; color: white; border: none; padding: 8px 16px; border-radius: 6px; cursor: pointer; margin-top: 10px;">📋 Copy AI Prompt</button>
+          <p id="copy-feedback" style="color: green; font-size: 0.85em; margin-top: 5px; display: none;">✅ Copied to clipboard!</p>
+        </div>
+
+        <h3>⌨️ Keyboard Shortcuts</h3>
+        <ul>
+          <li><strong>Ctrl + Scroll</strong> → Zoom in/out board</li>
+          <li><strong>Ctrl + +/-</strong> → Zoom buttons</li>
+          <li><strong>Enter</strong> → Create new card</li>
+          <li><strong>Shift + Enter</strong> → New line in card</li>
+          <li><strong>Double click</strong> → Edit project title</li>
+          <li><strong>Drag & Drop</strong> → Move cards between lists</li>
+        </ul>
+        <h3>⚙️ Operations</h3>
+        <ul>
+          <li><strong>Import</strong> → Load project from JSON file</li>
+          <li><strong>New Project</strong> → Create empty project</li>
+          <li><strong>🗑️ Icon</strong> → Delete card</li>
+        </ul>
+      </div>
     </div>
 
-    <h3>⌨️ Keyboard Shortcuts</h3>
-    <ul>
-      <li><strong>Ctrl + Scroll</strong> → Zoom in/out board</li>
-      <li><strong>Ctrl + +/-</strong> → Zoom buttons</li>
-      <li><strong>Enter</strong> → Create new card</li>
-      <li><strong>Shift + Enter</strong> → New line in card</li>
-      <li><strong>Double click</strong> → Edit project title</li>
-      <li><strong>Drag & Drop</strong> → Move cards between lists</li>
-    </ul>
-    <h3>⚙️ Operations</h3>
-    <ul>
-      <li><strong>Import</strong> → Load project from JSON file</li>
-      <li><strong>New Project</strong> → Create empty project</li>
-      <li><strong>🗑️ Icon</strong> → Delete card</li>
-    </ul>
-  </div>
-</div>
+    <style>
+      .modal { display: none; position: fixed; z-index: 1000; left: 0; top: 0; width: 100%; height: 100%; background-color: rgba(0,0,0,0.5); }
+      .modal-content { background-color: #fefefe; color: #333; margin: 5% auto; padding: 20px; border-radius: 8px; width: 80%; max-width: 600px; box-shadow: 0 4px 20px rgba(0,0,0,0.3); max-height: 80vh; overflow-y: auto; }
+      .close-btn { color: #aaa; float: right; font-size: 28px; font-weight: bold; cursor: pointer; }
+      .close-btn:hover { color: #000; }
+    </style>
 
-<style>
-.modal { display: none; position: fixed; z-index: 1000; left: 0; top: 0; width: 100%; height: 100%; background-color: rgba(0,0,0,0.5); }
-.modal-content { background-color: #fefefe; color: #333; margin: 5% auto; padding: 20px; border-radius: 8px; width: 80%; max-width: 600px; box-shadow: 0 4px 20px rgba(0,0,0,0.3); max-height: 80vh; overflow-y: auto; }
-.close-btn { color: #aaa; float: right; font-size: 28px; font-weight: bold; cursor: pointer; }
-.close-btn:hover { color: #000; }
-</style>
+    <script>
+      document.addEventListener('DOMContentLoaded', function() {
+        const helpBtn = document.getElementById('help-btn');
+        const helpModal = document.getElementById('help-modal');
+        const closeHelp = document.getElementById('close-help');
+        const copyPromptBtn = document.getElementById('copy-prompt-btn');
+        const copyFeedback = document.getElementById('copy-feedback');
+        
+        if (helpBtn && helpModal) {
+          helpBtn.addEventListener('click', () => {
+            helpModal.style.display = 'block';
+          });
+        }
+        
+        if (closeHelp && helpModal) {
+          closeHelp.addEventListener('click', () => {
+            helpModal.style.display = 'none';
+            if (copyFeedback) copyFeedback.style.display = 'none';
+          });
+        }
+        
+        window.addEventListener('click', (e) => {
+          if (e.target === helpModal) {
+            helpModal.style.display = 'none';
+            if (copyFeedback) copyFeedback.style.display = 'none';
+          }
+        });
 
-<script>
-  document.addEventListener('DOMContentLoaded', function() {
-    const helpBtn = document.getElementById('help-btn');
-    const helpModal = document.getElementById('help-modal');
-    const closeHelp = document.getElementById('close-help');
-    const copyPromptBtn = document.getElementById('copy-prompt-btn');
-    const copyFeedback = document.getElementById('copy-feedback');
-    
-    if (helpBtn && helpModal) {
-      helpBtn.addEventListener('click', () => {
-        helpModal.style.display = 'block';
-      });
-    }
-    
-    if (closeHelp && helpModal) {
-      closeHelp.addEventListener('click', () => {
-        helpModal.style.display = 'none';
-        if (copyFeedback) copyFeedback.style.display = 'none';
-      });
-    }
-    
-    window.addEventListener('click', (e) => {
-      if (e.target === helpModal) {
-        helpModal.style.display = 'none';
-        if (copyFeedback) copyFeedback.style.display = 'none';
-      }
-    });
-
-    const promptTemplate = `You are an assistant that creates projects for 3LO (a Kanban board).
+        const promptTemplate = `You are an assistant that creates projects for 3LO (a Kanban board).
 
 REQUIRED JSON FORMAT:
 {
@@ -204,21 +203,23 @@ INSTRUCTIONS:
 - Always include the "_documentation" field
 - IDs must be unique (use timestamp or nanoid)`;
 
-    if (copyPromptBtn) {
-      copyPromptBtn.addEventListener('click', async () => {
-        try {
-          await navigator.clipboard.writeText(promptTemplate);
-          if (copyFeedback) {
-            copyFeedback.style.display = 'block';
-            setTimeout(() => {
-              copyFeedback.style.display = 'none';
-            }, 3000);
-          }
-        } catch (err) {
-          console.error('Copy error:', err);
-          alert('Copy failed. Check console.');
+        if (copyPromptBtn) {
+          copyPromptBtn.addEventListener('click', async () => {
+            try {
+              await navigator.clipboard.writeText(promptTemplate);
+              if (copyFeedback) {
+                copyFeedback.style.display = 'block';
+                setTimeout(() => {
+                  copyFeedback.style.display = 'none';
+                }, 3000);
+              }
+            } catch (err) {
+              console.error('Copy error:', err);
+              alert('Copy failed. Check console.');
+            }
+          });
         }
       });
-    }
-  });
-</script>
+    </script>
+  </body>
+</html>

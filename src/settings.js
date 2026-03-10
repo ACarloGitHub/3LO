@@ -96,6 +96,14 @@ function updateColorInputs() {
   });
 }
 
+// Convert hex to rgba with alpha
+function hexToRgba(hex, alpha) {
+  const r = parseInt(hex.slice(1, 3), 16);
+  const g = parseInt(hex.slice(3, 5), 16);
+  const b = parseInt(hex.slice(5, 7), 16);
+  return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+}
+
 function applyColors() {
   // Apply CSS custom properties
   const root = document.documentElement;
@@ -108,27 +116,37 @@ function applyColors() {
 
   // Apply to specific elements
   const header = document.querySelector('.header');
-  if (header) header.style.backgroundColor = currentColors.header;
+  if (header) {
+    header.style.background = `linear-gradient(135deg, ${currentColors.header} 0%, ${hexToRgba(currentColors.header, 0.8)} 100%)`;
+  }
 
   const body = document.body;
-  if (body) body.style.background = `linear-gradient(135deg, ${currentColors.background} 0%, ${adjustColor(currentColors.background, -20)} 100%)`;
+  if (body) {
+    body.style.background = `linear-gradient(135deg, ${currentColors.background} 0%, ${hexToRgba(currentColors.background, 0.7)} 100%)`;
+  }
 
   const footer = document.querySelector('.app-footer');
-  if (footer) footer.style.backgroundColor = currentColors.footer;
+  if (footer) {
+    footer.style.backgroundColor = currentColors.footer;
+  }
 
-  // Apply to project cards
+  // Apply to project cards - colored background with transparency
   document.querySelectorAll('.project-card').forEach(card => {
-    card.style.borderLeft = `3px solid ${currentColors.projects}`;
+    card.style.background = hexToRgba(currentColors.projects, 0.15);
+    card.style.border = `1px solid ${hexToRgba(currentColors.projects, 0.3)}`;
+    card.style.boxShadow = `0 2px 8px ${hexToRgba(currentColors.projects, 0.2)}`;
   });
 
   // Apply to columns
   document.querySelectorAll('.column').forEach(col => {
-    col.style.backgroundColor = currentColors.columns;
+    col.style.background = hexToRgba(currentColors.columns, 0.1);
+    col.style.border = `1px solid ${hexToRgba(currentColors.columns, 0.2)}`;
   });
 
   // Apply to cards
   document.querySelectorAll('.card').forEach(card => {
-    card.style.backgroundColor = currentColors.cards;
+    card.style.background = hexToRgba(currentColors.cards, 0.2);
+    card.style.border = `1px solid ${hexToRgba(currentColors.cards, 0.3)}`;
   });
 }
 
@@ -149,16 +167,6 @@ function loadColors() {
   } catch (e) {
     console.error('Failed to load colors:', e);
   }
-}
-
-// Helper: Adjust color brightness
-function adjustColor(color, amount) {
-  const hex = color.replace('#', '');
-  const num = parseInt(hex, 16);
-  const r = Math.min(255, Math.max(0, (num >> 16) + amount));
-  const g = Math.min(255, Math.max(0, ((num >> 8) & 0x00FF) + amount));
-  const b = Math.min(255, Math.max(0, (num & 0x00FF) + amount));
-  return `#${((r << 16) | (g << 8) | b).toString(16).padStart(6, '0')}`;
 }
 
 // Listen for storage changes (sync across tabs/pages)
