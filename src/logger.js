@@ -1,108 +1,64 @@
-// Logger - Centralized logging system for 3LO
-// Logs are saved to src-tauri/logs/ with automatic rotation
-// Max 7 days, max 10 files
+/**
+ * Logger centralizzato per 3LO
+ * Per ora: logga in console con struttura
+ * In futuro: salverà su file
+ */
 
-import { writeTextFile, readDir, remove } from '@tauri-apps/plugin-fs';
-import { appLogDir } from '@tauri-apps/api/path';
+// Livelli di log
+const LEVELS = {
+  DEBUG: 0,
+  INFO: 1,
+  WARN: 2,
+  ERROR: 3
+};
 
-const MAX_LOG_DAYS = 7;
-const MAX_LOG_FILES = 10;
-const LOG_PREFIX = '3lo_';
+// Livello minimo (DEBUG = logga tutto)
+const MIN_LEVEL = LEVELS.INFO;
 
-class Logger {
-  constructor() {
-    this.logs = [];
-    this.logDir = null;
-    this.currentLogFile = null;
-    this.init();
+// Stile console per ogni livello
+const STYLES = {
+  DEBUG: 'color: gray',
+  INFO: 'color: #2196F3',
+  WARN: 'color: #FF9800',
+  ERROR: 'color: #f44336; font-weight: bold'
+};
+
+/**
+ * Logga un messaggio
+ * @param {string} level - DEBUG, INFO, WARN, ERROR
+ * @param {string} source - Origine del log (es. 'home', 'db', 'import')
+ * @param {string} message - Messaggio
+ * @param {object} data - Dati aggiuntivi (opzionale)
+ */
+function log(level, source, message, data = null) {
+  // Se il livello è sotto il minimo, non loggare
+  if (LEVELS[level] < MIN_LEVEL) return;
+  
+  const timestamp = new Date().toISOString().substr(11, 12); // HH:MM:SS.mmm
+  const style = STYLES[level] || 'color: inherit';
+  
+  // Prefisso con emoji
+  const emoji = { DEBUG: '🔍', INFO: 'ℹ️', WARN: '⚠️', ERROR: '❌' }[level] || '•';
+  
+  // Log in console
+  const prefix = `${emoji} [${timestamp}] [${source}]`;
+  
+  if (data) {
+    console.log(`%c${prefix} ${message}`, style, data);
+  } else {
+    console.log(`%c${prefix} ${message}`, style);
   }
-
-  async init() {
-    try {
-      this.logDir = await appLogDir();
-      this.currentLogFile = this.generateLogFilename();
-      await this.cleanupOldLogs();
-      this.info('Logger initialized');
-    } catch (err) {
-      console.error('Logger init failed:', err);
-    }
-  }
-
-  generateLogFilename() {
-    const now = new Date();
-    const ts = now.toISOString().replace(/[:.]/g, '-').slice(0, 19);
-    return `${LOG_PREFIX}${ts}.log`;
-  }
-
-  async cleanupOldLogs() {
-    try {
-      const entries = await readDir(this.logDir);
-      const logFiles = entries
-        .filter(e => e.name && e.name.startsWith(LOG_PREFIX) && e.name.endsWith('.log'))
-        .map(e => ({ name: e.name, path: `${this.logDir}/${e.name}` }));
-      
-      // Sort by name (newest last)
-      logFiles.sort((a, b) => a.name.localeCompare(b.name));
-      
-      // Keep only MAX_LOG_FILES
-      if (logFiles.length > MAX_LOG_FILES) {
-        const toDelete = logFiles.slice(0, logFiles.length - MAX_LOG_FILES);
-        for (const file of toDelete) {
-          await remove(file.path);
-          console.log(`Deleted old log: ${file.name}`);
-        }
-      }
-    } catch (err) {
-      console.error('Cleanup failed:', err);
-    }
-  }
-
-  formatMessage(level, message) {
-    const timestamp = new Date().toISOString();
-    return `[${timestamp}] [${level.toUpperCase()}] ${message}`;
-  }
-
-  async logToFile(level, message) {
-    try {
-      const line = this.formatMessage(level, message) + '\n';
-      // Append to current log file
-      // Note: Tauri doesn't have append, so we store in memory and flush periodically
-      this.logs.push(line);
-      
-      // Flush every 10 entries or on explicit call
-      if (this.logs.length >= 10) {
-        await this.flush();
-      }
-    } catch (err) {
-      console.error('Log write failed:', err);
-    }
-  }
-
-  async flush() {
-    if (this.logs.length === 0 || !this.logDir) return;
-    try {
-      const content = this.logs.join('');
-      const logPath = `${this.logDir}/${this.currentLogFile}`;
-      // Note: writeTextFile overwrites; for append we'd need read+write
-      // For now, console is primary, file is secondary
-      await writeTextFile(logPath, content, { append: true });
-      this.logs = [];
-    } catch (err) {
-      console.error('Flush failed:', err);
-    }
-  }
-
-  log(level, message) {
-    const formatted = this.formatMessage(level, message);
-    console.log(formatted);
-    this.logToFile(level, message);
-  }
-
-  info(msg) { this.log('INFO', msg); }
-  warn(msg) { this.log('WARN', msg); }
-  error(msg) { this.log('ERROR', msg); }
-  debug(msg) { this.log('DEBUG', msg); }
 }
 
-// Singleton
-export const logger = new Logger();
+/**
+ * Logger singleton
+ */
+const logger = {
+  debug: (source, message, data) => log('DEBUG', source, message, data),
+  info: (source, message, data) => log('INFO', source, message, data),
+  warn: (source, message, data) => log('WARN', source, message, data),
+  error: (source, message, data) => log('ERROR', source, message, data)
+};
+
+export default logger;
+export { log };

@@ -1,17 +1,35 @@
 // Home - Projects Management (con SQLite)
 import { getAllProjects, saveProject, deleteProject, loadProject, initDB, renameProject } from './db_sqlite.js';
-import { save } from '@tauri-apps/plugin-dialog';
+import { save, confirm } from '@tauri-apps/plugin-dialog';
 import { writeTextFile } from '@tauri-apps/plugin-fs';
+import logger from './logger.js';
 
 let projects = [];
 let currentSortMode = 'custom';
 
-// Inizializza all'avvio
+// ==========================================
+// INIT - Chiamato UNA VOLTA all'avvio
+// ==========================================
+
 async function init() {
   await initDB();
   await loadProjects();
   render();
+  
+  // Registra listener UNA SOLA VOLTA
+  setupEventDelegation();
+  
+  // Ascolta evento di aggiornamento progetti (da import)
+  window.addEventListener('projects-updated', async () => {
+    logger.info('home', 'Aggiornamento lista progetti...');
+    await loadProjects();
+    render();
+  });
 }
+
+// ==========================================
+// LOAD & SORT
+// ==========================================
 
 async function loadProjects() {
   projects = await getAllProjects();
@@ -37,6 +55,10 @@ function formatDate(ts) {
   }
 }
 
+// ==========================================
+// RENDER - Aggiorna SOLO il DOM
+// ==========================================
+
 async function render() {
   const container = document.getElementById('projects');
   container.innerHTML = '';
@@ -55,7 +77,10 @@ async function render() {
   `;
   container.appendChild(sortDiv);
 
-  document.getElementById('home-sort-select').addEventListener('change', (e) => {
+  // Gestione cambio ordinamento
+  const sortSelect = document.getElementById('home-sort-select');
+  sortSelect.value = currentSortMode;
+  sortSelect.addEventListener('change', (e) => {
     currentSortMode = e.target.value;
     render();
   });
@@ -80,136 +105,156 @@ async function render() {
     `;
     container.appendChild(card);
   }
+}
 
-  // Event listeners
-  document.querySelectorAll('.btn-open').forEach(btn => {
-    btn.addEventListener('click', async (e) => {
-      const id = e.target.dataset.id;
+// ==========================================
+// EVENT DELEGATION - Registrato UNA VOLTA
+// ==========================================
+
+function setupEventDelegation() {
+  const container = document.getElementById('projects');
+  
+  container.addEventListener('click', async (e) => {
+    const btn = e.target.closest('button');
+    if (!btn) return;
+    
+    const id = btn.dataset.id;
+    const proj = projects.find(p => String(p.id) === String(id));
+    
+    // ── OPEN ──────────────────────────────────────
+    if (btn.classList.contains('btn-open')) {
       localStorage.setItem('3lo_current_project', id);
       window.location.href = './board.html';
-    });
-  });
-
-  document.querySelectorAll('.btn-export').forEach(btn => {
-    btn.addEventListener('click', async (e) => {
-      const id = e.target.dataset.id;
-      const proj = projects.find(p => String(p.id) === String(id));
-      if (!proj) return;
-
-      // Carica dati da localStorage (dove li salva board.js)
-      const boardJson = localStorage.getItem('3lo_board_' + id);
-      const cardsJson = localStorage.getItem('3lo_cards_data_' + id);
-      
-      const fullData = {
-        project: proj,
-        board: boardJson ? JSON.parse(boardJson) : [],
-        cards: cardsJson ? JSON.parse(cardsJson) : {}
-      };
-      const exportData = {
-        "_documentation": {
-          "format": "3LO Project Export v1.0",
-          "description": "Struttura JSON per importazione in 3LO",
-          "fields": {
-            "version": "Versione formato (stringa, es: '1.0')",
-            "project": {
-              "id": "ID univoco progetto (stringa)",
-              "name": "Nome visualizzato (stringa)",
-              "created": "Timestamp creazione (numero, epoch ms)"
-            },
-            "board": "Array colonne, ognuna con {id, title, cards: [{id, text}]}",
-            "cards": "Oggetto metadata card (può essere vuoto {})",
-            "exportedAt": "ISO 8601 timestamp export"
-          },
-          "regole": [
-            "board è array: [{id, title, cards: [...]}]",
-            "cards dentro board ha solo {id, text}",
-            "cards (root) è oggetto metadata: {cardId: {created, modified, note}}",
-            "id progetto univoco, senza spazi",
-            "text supporta emoji e unicode"
-          ]
-        },
-        version: '1.0',
-        project: proj,
-        board: fullData?.board || [],
-        cards: fullData?.cards || {},
-        exportedAt: new Date().toISOString()
-      };
-
-      const jsonStr = JSON.stringify(exportData, null, 2);
-      const filename = `${proj.name.replace(/[^a-z0-9]/gi, '_').toLowerCase()}_3lo.json`;
-
-      // SALVATAGGIO FILE
-      try {
-        console.log('🔄 [1/5] Apertura dialog save...');
-        console.log('   Filename suggerito:', filename);
-        
-        const filePath = await save({
-          title: 'Salva progetto',
-          defaultPath: filename,
-          filters: [{ name: 'JSON', extensions: ['json'] }]
-        });
-        
-        console.log('📂 [2/5] Dialog chiuso. Percorso:', filePath);
-        
-        if (!filePath) {
-          console.log('❌ [3/5] Percorso vuoto - utente ha annullato?');
-          return;
-        }
-        
-        console.log('📝 [3/5] Scrittura file con writeTextFile...');
-        console.log('   Lunghezza JSON:', jsonStr.length, 'caratteri');
-        
-        await writeTextFile(filePath, jsonStr);
-        
-        console.log('✅ [4/5] writeTextFile completato!');
-        console.log('   File salvato in:', filePath);
-        
-        alert('✅ Salvato in:\n' + filePath);
-        
-      } catch (err) {
-        console.error('❌ [5/5] ERRORE:', err);
-        console.error('   Messaggio:', err.message);
-        console.error('   Stack:', err.stack);
-        alert('❌ Errore salvataggio:\n' + err.message);
-      }
-    });
-  });
-
-  document.querySelectorAll('.btn-delete').forEach(btn => {
-    btn.addEventListener('click', async (e) => {
-      const id = e.target.dataset.id;
-      if (confirm('Delete?')) {
-        await deleteProject(id);
-        await loadProjects();
-        render();
-      }
-    });
-  });
-
-  // RENAME
-  document.querySelectorAll('.btn-rename').forEach(btn => {
-    btn.addEventListener('click', async (e) => {
-      const id = e.target.dataset.id;
-      const proj = projects.find(p => String(p.id) === String(id));
-      if (!proj) return;
-      
+      return;
+    }
+    
+    // Progetto necessario per le azioni seguenti
+    if (!proj) return;
+    
+    // ── RENAME ─────────────────────────────────────
+    if (btn.classList.contains('btn-rename')) {
       const newName = prompt('Nuovo nome:', proj.name);
       if (newName && newName.trim() !== '' && newName !== proj.name) {
         await renameProject(id, newName.trim());
         await loadProjects();
         render();
       }
-    });
+      return;
+    }
+    
+    // ── EXPORT ─────────────────────────────────────
+    if (btn.classList.contains('btn-export')) {
+      await handleExport(proj);
+      return;
+    }
+    
+    // ── DELETE ─────────────────────────────────────
+    if (btn.classList.contains('btn-delete')) {
+      console.log('🔍 [DELETE] Click rilevato - id:', id, 'proj:', proj?.name);
+      
+      // Usa confirm asincrono di Tauri con await
+      const confirmed = await confirm(`Eliminare il progetto "${proj.name}"?`, {
+        title: 'Conferma eliminazione',
+        okLabel: 'Elimina',
+        cancelLabel: 'Annulla'
+      });
+      
+      console.log('🔍 [DELETE] Conferma:', confirmed);
+      
+      if (!confirmed) {
+        console.log('🔍 [DELETE] Annullato - ESCO senza eliminare');
+        return;
+      }
+      
+      console.log('🔍 [DELETE] Confermato - chiamo deleteProject');
+      logger.info('home', `Eliminazione progetto: ${proj.name} (${id})`);
+      await deleteProject(id);
+      await loadProjects();
+      render();
+      console.log('🔍 [DELETE] Completato');
+      return;
+    }
   });
+}
 
-  // Drag se custom
-  if (currentSortMode === 'custom' && typeof Sortable !== 'undefined') {
-    // TODO: implementare riordinamento drag con SQLite
-    // Per ora disabilitato, serve aggiornare posizione nel DB
+// ==========================================
+// EXPORT - Funzione separata
+// ==========================================
+
+async function handleExport(proj) {
+  const id = proj.id;
+  
+  // Carica dati da localStorage
+  const boardJson = localStorage.getItem('3lo_board_' + id);
+  const cardsJson = localStorage.getItem('3lo_cards_data_' + id);
+  
+  const fullData = {
+    project: proj,
+    board: boardJson ? JSON.parse(boardJson) : [],
+    cards: cardsJson ? JSON.parse(cardsJson) : {}
+  };
+  
+  const exportData = {
+    "_documentation": {
+      "format": "3LO Project Export v1.0",
+      "description": "Struttura JSON per importazione in 3LO",
+      "fields": {
+        "version": "Versione formato (stringa, es: '1.0')",
+        "project": {
+          "id": "ID univoco progetto (stringa)",
+          "name": "Nome visualizzato (stringa)",
+          "created": "Timestamp creazione (numero, epoch ms)"
+        },
+        "board": "Array colonne, ognuna con {id, title, cards: [{id, text}]}",
+        "cards": "Oggetto metadata card (può essere vuoto {})",
+        "exportedAt": "ISO 8601 timestamp export"
+      },
+      "regole": [
+        "board è array: [{id, title, cards: [...]}]",
+        "cards dentro board ha solo {id, text}",
+        "cards (root) è oggetto metadata: {cardId: {created, modified, note}}",
+        "id progetto univoco, senza spazi",
+        "text supporta emoji e unicode"
+      ]
+    },
+    version: '1.0',
+    project: proj,
+    board: fullData?.board || [],
+    cards: fullData?.cards || {},
+    exportedAt: new Date().toISOString()
+  };
+
+  const jsonStr = JSON.stringify(exportData, null, 2);
+  const filename = `${proj.name.replace(/[^a-z0-9]/gi, '_').toLowerCase()}_3lo.json`;
+
+  try {
+    logger.info('home', `Export progetto: ${proj.name}`);
+    
+    const filePath = await save({
+      title: 'Salva progetto',
+      defaultPath: filename,
+      filters: [{ name: 'JSON', extensions: ['json'] }]
+    });
+    
+    if (!filePath) {
+      logger.info('home', 'Export annullato dall\'utente');
+      return;
+    }
+    
+    await writeTextFile(filePath, jsonStr);
+    logger.info('home', `Export completato: ${filePath}`);
+    alert('✅ Salvato in:\n' + filePath);
+    
+  } catch (err) {
+    logger.error('home', `Errore export: ${err.message}`);
+    alert('❌ Errore salvataggio:\n' + err.message);
   }
 }
 
-// New Project
+// ==========================================
+// NEW PROJECT
+// ==========================================
+
 document.getElementById('new-project').addEventListener('click', async () => {
   const name = prompt('Project name:');
   if (name) {
@@ -221,5 +266,8 @@ document.getElementById('new-project').addEventListener('click', async () => {
   }
 });
 
-// Avvia
+// ==========================================
+// AVVIA
+// ==========================================
+
 init();
