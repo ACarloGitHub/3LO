@@ -1,0 +1,63 @@
+{
+  "_documentation": {
+    "format": "3LO Project Export v1.0",
+    "description": "JSON structure for 3LO Kanban board import",
+    "fields": {
+      "version": "Format version (string, e.g. '1.0')",
+      "project": {
+        "id": "Unique project ID (string, no spaces)",
+        "name": "Display name (string)",
+        "created": "Creation timestamp (number, epoch ms)"
+      },
+      "board": "Array of columns: {id, title, cards: [{id, text}]}",
+      "cards": "Card metadata object: {cardId: {created, modified, note}}",
+      "exportedAt": "ISO 8601 export timestamp"
+    },
+    "rules": [
+      "board is array: [{id, title, cards: [...]}]",
+      "cards inside board have {id, text} only",
+      "cards (root) is metadata: {cardId: {created, modified, note}}",
+      "project ID must be unique, no spaces",
+      "text supports emoji and unicode"
+    ],
+    "column_examples": [
+      "🔴 High Priority",
+      "🟡 Medium Priority",
+      "🟢 Low Priority",
+      "✅ Done",
+      "🤖 AI Tasks",
+      "🎨 Design",
+      "⚙️ Development"
+    ]
+  },
+  "version": "1.0",
+  "project": {
+    "id": "example-ai-project",
+    "name": "Example AI Project",
+    "created": 1773345001963
+  },
+  "board": [
+    {
+      "id": "col-example-1",
+      "title": "📋 Example Column",
+      "cards": [
+        {
+          "id": "card-1",
+          "text": "📝 This is a sample card"
+        },
+        {
+          "id": "card-2",
+          "text": "✅ Use emoji for clarity"
+        }
+      ]
+    }
+  ],
+  "cards": {
+    "card-1": {
+      "created": 1773345001963,
+      "modified": 1773345001963,
+      "note": "Private notes for this card"
+    }
+  },
+  "exportedAt": "2026-03-12T19:50:01.963Z"
+}

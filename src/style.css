@@ -1,6 +1,7 @@
 * { margin: 0; padding: 0; box-sizing: border-box; }
 
 :root {
+  --zoom-level: 1;
   --color-header: #1a1a2e;
   --color-background: #16213e;
   --color-footer: #0f0f23;
@@ -128,16 +129,37 @@ body {
 .project-card {
   background: rgba(255, 255, 255, 0.05);
   border-radius: 12px;
-  padding: 1rem;
   width: 100%;
   min-height: 140px;
   display: flex;
-  flex-direction: column;
-  gap: 0.5rem;
+  flex-direction: row;
   border: 1px solid rgba(255, 255, 255, 0.1);
+  overflow: hidden;
   
   transition: all 0.2s ease;
   cursor: pointer;
+}
+
+/* Lato sinistro con alpha minore - area maniglia */
+.project-card-left {
+  width: 32px;
+  min-width: 32px;
+  background: rgba(255, 255, 255, 0.02);
+  border-right: 1px solid rgba(255, 255, 255, 0.05);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding-top: 0.75rem;
+}
+
+/* Lato destro - contenuto principale */
+.project-card-right {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  padding: 1rem;
+  min-width: 0;
 }
 
 .project-card:hover {
@@ -227,9 +249,18 @@ body {
 
 .column-header {
   display: flex;
-  justify-content: space-between;
   align-items: center;
   margin-bottom: 0.75rem;
+  gap: 0.5rem;
+}
+
+.column-header .column-title {
+  flex: 1;
+  min-width: 0;
+}
+
+.column-header .column-delete {
+  margin-left: auto;
 }
 
 .column-title {
@@ -262,15 +293,38 @@ body {
 
 .card {
   background: rgba(255, 255, 255, 0.1);
-  padding: 0.75rem;
   border-radius: 8px;
-  cursor: grab;
+  display: flex;
+  flex-direction: row;
+  overflow: hidden;
   transition: transform 0.2s, box-shadow 0.2s;
 }
 
 .card:hover {
   transform: translateY(-2px);
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+}
+
+/* Lato sinistro con alpha minore - area maniglia */
+.card-left {
+  width: 24px;
+  min-width: 24px;
+  background: rgba(255, 255, 255, 0.03);
+  border-right: 1px solid rgba(255, 255, 255, 0.05);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding-top: 0.5rem;
+}
+
+/* Lato destro - contenuto principale */
+.card-right {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  padding: 0.75rem;
+  min-width: 0;
 }
 
 .card-actions {
@@ -371,6 +425,149 @@ body {
 .sortable-ghost {
   opacity: 0.3;
   background: #6366f1;
+}
+
+/* ===== DRAG HANDLES ===== */
+
+/* Handle per colonne (⋮⋮) */
+.column-drag-handle {
+  cursor: grab;
+  padding: 0.25rem 0.5rem;
+  margin-right: 0.5rem;
+  color: rgba(255, 255, 255, 0.4);
+  font-weight: bold;
+  letter-spacing: 2px;
+  user-select: none;
+  border-radius: 4px;
+  transition: all 0.2s;
+}
+
+.column-drag-handle:hover {
+  color: rgba(255, 255, 255, 0.8);
+  background: rgba(255, 255, 255, 0.1);
+}
+
+.column-drag-handle:active {
+  cursor: grabbing;
+}
+
+/* Handle per schede (⋮⋮) */
+.card-drag-handle {
+  cursor: grab;
+  padding: 0.15rem 0.1rem;
+  color: rgba(255, 255, 255, 0.25);
+  font-weight: bold;
+  letter-spacing: 1px;
+  font-size: 0.75rem;
+  user-select: none;
+  border-radius: 4px;
+  transition: all 0.2s;
+  writing-mode: vertical-rl;
+  text-orientation: mixed;
+}
+
+.card-drag-handle:hover {
+  color: rgba(255, 255, 255, 0.8);
+  background: rgba(255, 255, 255, 0.15);
+}
+
+.card-drag-handle:active {
+  cursor: grabbing;
+}
+
+/* ===== GHOST STYLES MIGLIORATI ===== */
+
+/* Ghost per colonne */
+.sortable-ghost-column {
+  opacity: 0.4;
+  background: linear-gradient(135deg, #6366f1 0%, #4c51bf 100%);
+  border: 2px dashed rgba(255, 255, 255, 0.5);
+  border-radius: 12px;
+  min-width: 280px;
+  max-width: 280px;
+  min-height: 150px;
+}
+
+/* Ghost per schede */
+.sortable-ghost-card {
+  opacity: 0.5;
+  background: rgba(99, 102, 241, 0.3);
+  border: 2px dashed rgba(255, 255, 255, 0.4);
+  border-radius: 8px;
+  min-height: 60px;
+}
+
+/* Elemento mentre viene trascinato (chosen) */
+.sortable-chosen-column,
+.sortable-chosen-card {
+  opacity: 0.9;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+}
+
+/* Fallback (elemento che segue il cursore) */
+.sortable-fallback-column {
+  opacity: 0.9;
+  background: rgba(99, 102, 241, 0.9);
+  border-radius: 12px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
+  /* Compensa lo zoom del board per seguire correttamente il cursore */
+  transform: scale(calc(1.02 / var(--zoom-level, 1)));
+  transform-origin: center center;
+}
+
+.sortable-fallback-card {
+  opacity: 0.95;
+  background: rgba(255, 255, 255, 0.15);
+  border-radius: 8px;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.4);
+  /* Compensa lo zoom del board per seguire correttamente il cursore */
+  transform: scale(calc(1.02 / var(--zoom-level, 1)));
+  transform-origin: center center;
+}
+
+/* Handle per progetti (⋮⋮) */
+.project-drag-handle {
+  cursor: grab;
+  padding: 0.25rem 0.2rem;
+  color: rgba(255, 255, 255, 0.25);
+  font-weight: bold;
+  letter-spacing: 1px;
+  font-size: 0.85rem;
+  user-select: none;
+  border-radius: 4px;
+  transition: all 0.2s;
+  writing-mode: vertical-rl;
+  text-orientation: mixed;
+}
+
+.project-drag-handle:hover {
+  color: rgba(255, 255, 255, 0.8);
+  background: rgba(255, 255, 255, 0.15);
+}
+
+.project-drag-handle:active {
+  cursor: grabbing;
+}
+
+/* Ghost per progetti */
+.sortable-ghost-project {
+  opacity: 0.4;
+  background: linear-gradient(135deg, #6366f1 0%, #4c51bf 100%);
+  border: 2px dashed rgba(255, 255, 255, 0.5);
+  border-radius: 12px;
+}
+
+.sortable-chosen-project {
+  opacity: 0.9;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+}
+
+.sortable-fallback-project {
+  opacity: 0.9;
+  background: rgba(99, 102, 241, 0.9);
+  border-radius: 12px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
+  transform: scale(1.02);
 }
 
 /* Card text editable */

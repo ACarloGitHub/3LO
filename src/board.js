@@ -1,8 +1,12 @@
 // Board - Kanban (No Sort, drag only)
+import { getLastExportPath, saveLastExportPath, loadProject, renameProject, saveProject } from './db_sqlite.js';
+import { save as saveDialog } from '@tauri-apps/plugin-dialog';
+import { writeTextFile } from '@tauri-apps/plugin-fs';
 
 let columns = [];
 let cardsData = {};
 let currentProjectId = null;
+let currentProject = null;  // Oggetto progetto completo per salvataggio DB
 
 // Zoom state per zoom fluido
 let zoomLevel = 1.0;
@@ -10,9 +14,101 @@ const ZOOM_MIN = 0.5;
 const ZOOM_MAX = 2.0;
 const ZOOM_STEP = 0.1;
 
-function save() {
+async function save() {
+  // Salva su localStorage (backup)
   localStorage.setItem('3lo_board_' + currentProjectId, JSON.stringify(columns));
   localStorage.setItem('3lo_cards_data_' + currentProjectId, JSON.stringify(cardsData));
+  
+  // Salva su database SQLite (primario)
+  if (currentProject) {
+    try {
+      await saveProject(currentProject, columns, cardsData);
+    } catch (err) {
+      console.error('Errore salvataggio DB:', err);
+    }
+  }
+}
+
+// Quick Export - Salva nel file JSON precedente o chiede dove salvare
+async function handleQuickExport() {
+  if (!currentProjectId) {
+    alert('❌ Nessun progetto caricato');
+    return;
+  }
+  
+  // Carica dati dal database SQLite
+  const projectData = await loadProject(currentProjectId);
+  
+  if (!projectData) {
+    alert('❌ Progetto non trovato nel database');
+    return;
+  }
+  
+  const proj = projectData.project;
+  const boardData = projectData.board || [];
+  const cardsData = projectData.cards || {};
+  
+  const exportData = {
+    "_documentation": {
+      "format": "3LO Project Export v1.0",
+      "description": "Struttura JSON per importazione in 3LO",
+      "fields": {
+        "version": "Versione formato (stringa, es: '1.0')",
+        "project": {
+          "id": "ID univoco progetto (stringa)",
+          "name": "Nome visualizzato (stringa)",
+          "created": "Timestamp creazione (numero, epoch ms)"
+        },
+        "board": "Array colonne, ognuna con {id, title, cards: [{id, text}]}",
+        "cards": "Oggetto metadata card (può essere vuoto {})",
+        "exportedAt": "ISO 8601 timestamp export"
+      },
+      "regole": [
+        "board è array: [{id, title, cards: [...]}]",
+        "cards dentro board ha solo {id, text}",
+        "cards (root) è oggetto metadata: {cardId: {created, modified, note}}",
+        "id progetto univoco, senza spazi",
+        "text supporta emoji e unicode"
+      ]
+    },
+    version: '1.0',
+    project: proj,
+    board: boardData,
+    cards: cardsData,
+    exportedAt: new Date().toISOString()
+  };
+  
+  const jsonStr = JSON.stringify(exportData, null, 2);
+  
+  try {
+    // Controlla se c'è un path precedente
+    const lastPath = await getLastExportPath(currentProjectId);
+    
+    if (lastPath) {
+      // Sovrascrivi il file esistente
+      await writeTextFile(lastPath, jsonStr);
+      alert('✅ File aggiornato:\n' + lastPath);
+    } else {
+      // Nessun path precedente, chiedi dove salvare
+      const filename = `${proj.name.replace(/[^a-z0-9]/gi, '_').toLowerCase()}_3lo.json`;
+      const filePath = await saveDialog({
+        title: 'Salva progetto',
+        defaultPath: filename,
+        filters: [{ name: 'JSON', extensions: ['json'] }]
+      });
+      
+      if (!filePath) {
+        return; // Annullato
+      }
+      
+      await writeTextFile(filePath, jsonStr);
+      await saveLastExportPath(currentProjectId, filePath);
+      alert('✅ Salvato in:\n' + filePath);
+    }
+  } catch (err) {
+    alert('❌ Errore: ' + err.message);
+    console.error('Quick export error:', err);
+  }
 }
 
 function initCardData(cardId) {
@@ -36,10 +132,10 @@ function openNote(cardId) {
     </div>
   `;
   modal.addEventListener('click', (e) => { if (e.target === modal) modal.remove(); });
-  modal.querySelector('#save-note').addEventListener('click', () => {
+  modal.querySelector('#save-note').addEventListener('click', async () => {
     cardsData[cardId].note = modal.querySelector('.card-note-textarea').value;
     cardsData[cardId].modified = Date.now();
-    save();
+    await save();
     modal.remove();
   });
   document.body.appendChild(modal);
@@ -51,23 +147,24 @@ function createColumn(column) {
   colEl.dataset.id = column.id;
   colEl.innerHTML = `
     <div class="column-header">
+      <div class="column-drag-handle" title="Drag to move list">⋮⋮</div>
       <div class="column-title" contenteditable="true">${column.title}</div>
-      <button class="column-delete">&times;</button>
+      <button class="column-delete">×</button>
     </div>
     <div class="cards" data-column-id="${column.id}"></div>
     <button class="add-card">+ Add Card</button>
   `;
   
-  colEl.querySelector('.column-title').addEventListener('blur', (e) => {
+  colEl.querySelector('.column-title').addEventListener('blur', async (e) => {
     column.title = e.target.textContent;
-    save();
+    await save();
   });
   
-  colEl.querySelector('.column-delete').addEventListener('click', () => {
+  colEl.querySelector('.column-delete').addEventListener('click', async () => {
     if (confirm('Delete this list?')) {
       columns = columns.filter(c => c.id !== column.id);
       colEl.remove();
-      save();
+      await save();
     }
   });
   
@@ -84,8 +181,19 @@ function createColumn(column) {
     new Sortable(cardsContainer, {
       group: 'cards',
       animation: 150,
-      ghostClass: 'sortable-ghost',
-      onEnd: updateCardOrder
+      handle: '.card-drag-handle',
+      ghostClass: 'sortable-ghost-card',
+      dragClass: 'sortable-drag-card',
+      chosenClass: 'sortable-chosen-card',
+      forceFallback: true,
+      fallbackClass: 'sortable-fallback-card',
+      onStart: function() {
+        isSortableDragging = true;
+      },
+      onEnd: function() {
+        isSortableDragging = false;
+        updateCardOrder();
+      }
     });
   }
   
@@ -98,18 +206,23 @@ function createCard(card) {
   cardEl.className = 'card';
   cardEl.dataset.id = card.id;
   cardEl.innerHTML = `
-    <div class="card-text" contenteditable="true">${card.text}</div>
-    <div class="card-actions">
-      <button class="card-note-btn">📝 Note</button>
-      <button class="card-delete-btn" title="Elimina scheda">🗑️</button>
+    <div class="card-left">
+      <div class="card-drag-handle" title="Drag to move card">⋮⋮</div>
+    </div>
+    <div class="card-right">
+      <div class="card-text" contenteditable="true">${card.text}</div>
+      <div class="card-actions">
+        <button class="card-note-btn">📝 Note</button>
+        <button class="card-delete-btn" title="Elimina scheda">🗑️</button>
+      </div>
     </div>
   `;
   
   const textEl = cardEl.querySelector('.card-text');
-  textEl.addEventListener('blur', () => {
+  textEl.addEventListener('blur', async () => {
     card.text = textEl.textContent.trim();
     cardsData[card.id].modified = Date.now();
-    save();
+    await save();
   });
   
   cardEl.querySelector('.card-note-btn').addEventListener('click', (e) => {
@@ -118,7 +231,7 @@ function createCard(card) {
   });
   
   // Elimina scheda
-  cardEl.querySelector(".card-delete-btn").addEventListener("click", (e) => {
+  cardEl.querySelector(".card-delete-btn").addEventListener("click", async (e) => {
     e.stopPropagation();
     if (confirm("Eliminare questa scheda?")) {
       // Trova la colonna e rimuovi la scheda
@@ -128,7 +241,7 @@ function createCard(card) {
       if (column) {
         column.cards = column.cards.filter(c => c.id !== card.id);
         delete cardsData[card.id];
-        save();
+        await save();
         cardEl.remove();
       }
     }
@@ -174,7 +287,7 @@ function addCard(container, columnId) {
     }
   });
   
-  addBtn.addEventListener('click', () => {
+  addBtn.addEventListener('click', async () => {
     if (textarea.value.trim()) {
       const cardId = Date.now().toString();
       const card = { id: cardId, text: textarea.value.trim() };
@@ -185,7 +298,7 @@ function addCard(container, columnId) {
       const column = columns.find(c => c.id === columnId);
       column.cards.push(card);
       
-      save();
+      await save();
       render();
     }
     wrapper.remove();
@@ -198,7 +311,7 @@ function addCard(container, columnId) {
   });
 }
 
-function updateCardOrder() {
+async function updateCardOrder() {
   const colElements = document.querySelectorAll('.column');
   colElements.forEach(colEl => {
     const colId = colEl.dataset.id;
@@ -211,29 +324,31 @@ function updateCardOrder() {
       return { id, text };
     });
   });
-  save();
+  await save();
 }
 
-function init() {
+async function init() {
   currentProjectId = localStorage.getItem('3lo_current_project');
   if (!currentProjectId) {
     window.location.href = './index.html';
     return;
   }
   
-  const projects = JSON.parse(localStorage.getItem('3lo_projects') || '[]');
-  const proj = projects.find(p => String(p.id) === String(currentProjectId));
-  if (proj) {
+  // Carica progetto dal database SQLite
+  const projectData = await loadProject(currentProjectId);
+  
+  if (projectData && projectData.project) {
+    currentProject = projectData.project;
+    const proj = currentProject;
     const titleEl = document.getElementById('board-title');
-    titleEl.textContent = '🌙 ' + proj.name;
+    titleEl.textContent = proj.name;
     
     // Aggiungi listener per edit titolo
-    titleEl.addEventListener('blur', () => {
-      const newName = titleEl.textContent.replace(/^🌙\s*/, '').trim();
+    titleEl.addEventListener('blur', async () => {
+      const newName = titleEl.textContent.trim();
       if (newName && newName !== proj.name) {
+        await renameProject(currentProjectId, newName);
         proj.name = newName;
-        localStorage.setItem('3lo_projects', JSON.stringify(projects));
-        save();
       }
     });
     
@@ -244,11 +359,16 @@ function init() {
         titleEl.blur();
       }
     });
+    
+    // Carica dati dal database
+    columns = projectData.board || [];
+    cardsData = projectData.cards || {};
+  } else {
+    // Fallback a localStorage se non trovato nel DB
+    columns = JSON.parse(localStorage.getItem('3lo_board_' + currentProjectId) || '[]');
+    cardsData = JSON.parse(localStorage.getItem('3lo_cards_data_' + currentProjectId) || '{}');
   }
   
-  columns = JSON.parse(localStorage.getItem('3lo_board_' + currentProjectId) || '[]');
-  
-  cardsData = JSON.parse(localStorage.getItem('3lo_cards_data_' + currentProjectId) || '{}');
   columns.forEach(col => col.cards.forEach(c => initCardData(c.id)));
   
   render();
@@ -265,9 +385,17 @@ function render() {
   if (typeof Sortable !== 'undefined') {
     new Sortable(board, {
       animation: 150,
-      handle: '.column-header',
-      ghostClass: 'sortable-ghost',
-      onEnd: () => {
+      handle: '.column-drag-handle',
+      ghostClass: 'sortable-ghost-column',
+      dragClass: 'sortable-drag-column',
+      chosenClass: 'sortable-chosen-column',
+      forceFallback: true,
+      fallbackClass: 'sortable-fallback-column',
+      onStart: function() {
+        isSortableDragging = true;
+      },
+      onEnd: async function() {
+        isSortableDragging = false;
         const newOrder = [];
         document.querySelectorAll('.column').forEach(el => {
           const colId = el.dataset.id;
@@ -275,33 +403,36 @@ function render() {
           if (col) newOrder.push(col);
         });
         columns = newOrder;
-        save();
+        await save();
       }
     });
   }
 }
 
-document.getElementById('back').addEventListener('click', () => {
+document.getElementById('back').addEventListener('click', async () => {
+  await save(); // Salva prima di uscire
   window.location.href = './index.html';
 });
 
 // Salva immediatamente su evento beforeunload (per chiusura finestra Ctrl+Q o X)
+// Nota: beforeunload non supporta async, quindi salviamo solo su localStorage
 window.addEventListener('beforeunload', () => {
-  save();
+  localStorage.setItem('3lo_board_' + currentProjectId, JSON.stringify(columns));
+  localStorage.setItem('3lo_cards_data_' + currentProjectId, JSON.stringify(cardsData));
 });
 
 // Per Tauri: gestione chiusura finestra
 if (window.__TAURI__) {
-  window.addEventListener('blur', save); // Salva quando perde focus
+  window.addEventListener('blur', () => save()); // Salva quando perde focus
 }
 
-document.getElementById('add-list').addEventListener('click', () => {
+document.getElementById('add-list').addEventListener('click', async () => {
   const title = prompt('List name:');
   if (title) {
     const colId = Date.now().toString();
     columns.push({ id: colId, title, cards: [] });
     render();
-    save();
+    await save();
   }
 });
 
@@ -309,6 +440,9 @@ document.getElementById('add-list').addEventListener('click', () => {
 document.getElementById("zoom-in").addEventListener("click", zoomIn);
 document.getElementById("zoom-out").addEventListener("click", zoomOut);
 document.getElementById("zoom-reset").addEventListener("click", resetZoom);
+
+// Event listener per quick export (🔄 Aggiorna)
+document.getElementById('quick-export').addEventListener('click', handleQuickExport);
 
 init();
   // Inizializza zoom dopo aver caricato il progetto
@@ -329,6 +463,9 @@ function applyZoom() {
   if (zoomResetBtn) {
     zoomResetBtn.textContent = Math.round(zoomLevel * 100) + "%";
   }
+  
+  // Esporta zoom level come variabile CSS per i fallback Sortable
+  document.documentElement.style.setProperty('--zoom-level', zoomLevel);
 }
 
 function zoomIn() { if (zoomLevel < ZOOM_MAX) { zoomLevel = Math.min(ZOOM_MAX, zoomLevel + ZOOM_STEP); applyZoom(); } }
@@ -343,10 +480,13 @@ document.addEventListener("wheel", function(e) {
 }, { passive: false });
 
 
-// DRAG-TO-SCROLL ORIZZONTALE
+// DRAG-TO-SCROLL BIDIREZIONALE
 let isDraggingScroll = false;
+let isSortableDragging = false;  // Flag per disabilitare drag-to-scroll durante Sortable
 let startXScroll = 0;
+let startYScroll = 0;
 let scrollLeftStart = 0;
+let scrollTopStart = 0;
 let autoScrollTimer = null;
 const EDGE_MARGIN = 80;
 const MAX_SPEED = 25;
@@ -361,11 +501,19 @@ function initDragToScroll() {
 }
 
 function handleDragStart(e) {
+  // Escludi se Sortable sta già draggando
+  if (isSortableDragging) return;
+  // Escludi handle di Sortable (colonne e schede)
+  if (e.target.closest(".column-drag-handle") || e.target.closest(".card-drag-handle")) return;
+  // Escludi elementi interattivi
   if (e.target.closest(".card") || e.target.closest(".column") || e.target.closest("button")) return;
+  
   isDraggingScroll = true;
   const container = document.querySelector(".board-container");
   startXScroll = e.pageX - container.offsetLeft;
+  startYScroll = e.pageY - container.offsetTop;
   scrollLeftStart = container.scrollLeft;
+  scrollTopStart = container.scrollTop;
   container.style.cursor = "grabbing";
 }
 
@@ -375,19 +523,38 @@ function handleDragMove(e) {
   const container = document.querySelector(".board-container");
   const rect = container.getBoundingClientRect();
   const mouseX = e.clientX - rect.left;
+  const mouseY = e.clientY - rect.top;
   const distLeft = mouseX;
   const distRight = rect.width - mouseX;
+  const distTop = mouseY;
+  const distBottom = rect.height - mouseY;
+  
+  // Auto-scroll ai bordi
+  let autoScrollX = 0;
+  let autoScrollY = 0;
+  
   if (distLeft < EDGE_MARGIN) {
-    const speed = Math.max(3, MAX_SPEED * (1 - distLeft / EDGE_MARGIN));
-    startAutoScroll(-speed);
+    autoScrollX = -Math.max(3, MAX_SPEED * (1 - distLeft / EDGE_MARGIN));
   } else if (distRight < EDGE_MARGIN) {
-    const speed = Math.max(3, MAX_SPEED * (1 - distRight / EDGE_MARGIN));
-    startAutoScroll(speed);
+    autoScrollX = Math.max(3, MAX_SPEED * (1 - distRight / EDGE_MARGIN));
+  }
+  
+  if (distTop < EDGE_MARGIN) {
+    autoScrollY = -Math.max(3, MAX_SPEED * (1 - distTop / EDGE_MARGIN));
+  } else if (distBottom < EDGE_MARGIN) {
+    autoScrollY = Math.max(3, MAX_SPEED * (1 - distBottom / EDGE_MARGIN));
+  }
+  
+  if (autoScrollX !== 0 || autoScrollY !== 0) {
+    startAutoScroll(autoScrollX, autoScrollY);
   } else {
     stopAutoScroll();
     const x = e.pageX - container.offsetLeft;
-    const walk = (x - startXScroll) * 1.5;
-    container.scrollLeft = scrollLeftStart - walk;
+    const y = e.pageY - container.offsetTop;
+    const walkX = (x - startXScroll) * 1.5;
+    const walkY = (y - startYScroll) * 1.5;
+    container.scrollLeft = scrollLeftStart - walkX;
+    container.scrollTop = scrollTopStart - walkY;
   }
 }
 
@@ -399,12 +566,13 @@ function handleDragEnd() {
   if (container) container.style.cursor = "grab";
 }
 
-function startAutoScroll(speed) {
+function startAutoScroll(speedX, speedY) {
   if (autoScrollTimer) clearInterval(autoScrollTimer);
   const container = document.querySelector(".board-container");
   if (!container) return;
   autoScrollTimer = setInterval(() => {
-    container.scrollLeft += speed;
+    if (speedX !== 0) container.scrollLeft += speedX;
+    if (speedY !== 0) container.scrollTop += speedY;
   }, 16);
 }
 

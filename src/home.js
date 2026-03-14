@@ -1,5 +1,5 @@
 // Home - Projects Management (con SQLite)
-import { getAllProjects, saveProject, deleteProject, loadProject, initDB, renameProject } from './db_sqlite.js';
+import { getAllProjects, saveProject, deleteProject, loadProject, initDB, renameProject, saveLastExportPath, saveProjectOrder } from './db_sqlite.js';
 import { save, confirm } from '@tauri-apps/plugin-dialog';
 import { writeTextFile } from '@tauri-apps/plugin-fs';
 import logger from './logger.js';
@@ -93,18 +93,68 @@ async function render() {
     card.className = 'project-card';
     card.dataset.id = proj.id;
     card.innerHTML = `
-      <div class="project-icon">🌙</div>
-      <div class="project-title">${proj.name}</div>
-      <div class="project-meta">${formatDate(proj.created)}</div>
-      <div class="project-actions">
-        <button class="btn-open" data-id="${proj.id}">Open</button>
-        <button class="btn-rename" data-id="${proj.id}">Ren</button>
-        <button class="btn-export" data-id="${proj.id}">Exp</button>
-        <button class="btn-delete" data-id="${proj.id}">Del</button>
+      <div class="project-card-left">
+        <div class="project-drag-handle" title="Drag to reorder">⋮⋮</div>
+      </div>
+      <div class="project-card-right">
+        <div class="project-icon">🌙</div>
+        <div class="project-title">${proj.name}</div>
+        <div class="project-meta">${formatDate(proj.created)}</div>
+        <div class="project-actions">
+          <button class="btn-open" data-id="${proj.id}">Open</button>
+          <button class="btn-rename" data-id="${proj.id}">Ren</button>
+          <button class="btn-export" data-id="${proj.id}">Exp</button>
+          <button class="btn-delete" data-id="${proj.id}">Del</button>
+        </div>
       </div>
     `;
     container.appendChild(card);
   }
+  
+  // Inizializza Sortable per i progetti (solo in modalità custom)
+  if (currentSortMode === 'custom' && typeof Sortable !== 'undefined') {
+    initProjectSortable();
+  }
+}
+
+// ==========================================
+// DRAG & DROP - Progetti
+// ==========================================
+
+let projectSortable = null;
+
+function initProjectSortable() {
+  const container = document.getElementById('projects');
+  if (!container) return;
+  
+  // Distruggi Sortable esistente se c'è
+  if (projectSortable) {
+    projectSortable.destroy();
+  }
+  
+  projectSortable = new Sortable(container, {
+    animation: 150,
+    handle: '.project-drag-handle',
+    ghostClass: 'sortable-ghost-project',
+    dragClass: 'sortable-drag-project',
+    chosenClass: 'sortable-chosen-project',
+    forceFallback: true,
+    fallbackClass: 'sortable-fallback-project',
+    onEnd: async (evt) => {
+      // Aggiorna l'ordine dei progetti
+      const newOrder = [];
+      container.querySelectorAll('.project-card').forEach(el => {
+        const id = el.dataset.id;
+        const proj = projects.find(p => String(p.id) === String(id));
+        if (proj) newOrder.push(proj);
+      });
+      
+      // Salva il nuovo ordine
+      projects = newOrder;
+      await saveProjectOrder(newOrder);
+      logger.info('home', 'Ordine progetti aggiornato');
+    }
+  });
 }
 
 // ==========================================
@@ -242,6 +292,10 @@ async function handleExport(proj) {
     }
     
     await writeTextFile(filePath, jsonStr);
+    
+    // Salva il path per future esportazioni rapide
+    await saveLastExportPath(proj.id, filePath);
+    
     logger.info('home', `Export completato: ${filePath}`);
     alert('✅ Salvato in:\n' + filePath);
     
