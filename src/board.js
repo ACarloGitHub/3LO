@@ -181,7 +181,11 @@ async function handleRefresh() {
       }
     } catch (e) {
       console.error('❌ [REFRESH] Errore lettura file:', e);
-      const resetPath = confirm('❌ File non trovato:\n' + jsonPath + '\n\nVuoi selezionare un nuovo file?');
+      const resetPath = await confirm('❌ File non trovato:\n' + jsonPath + '\n\nVuoi selezionare un nuovo file?', {
+        title: 'File non trovato',
+        okLabel: 'Sì, seleziona nuovo file',
+        cancelLabel: 'Annulla'
+      });
       if (resetPath) {
         await saveJsonPath(currentProjectId, null); // Reset path
         return handleRefresh(); // Ricomincia
@@ -316,7 +320,7 @@ function createColumn(column) {
   });
   
   colEl.querySelector('.column-delete').addEventListener('click', async () => {
-    if (confirm('Delete this list?')) {
+    if (await confirm('Eliminare questa lista?', { title: 'Elimina lista', okLabel: 'Elimina', cancelLabel: 'Annulla' })) {
       columns = columns.filter(c => c.id !== column.id);
       colEl.remove();
       await save();
