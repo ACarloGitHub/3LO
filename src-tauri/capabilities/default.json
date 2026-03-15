@@ -7,6 +7,9 @@
     "core:window:default",
     "core:window:allow-show",
     "core:window:allow-hide",
+    "core:app:default",
+    "core:path:default",
+    "core:path:allow-join",
     "dialog:default",
     "dialog:allow-open",
     "dialog:allow-save",
@@ -15,11 +18,22 @@
     "fs:write-files",
     "fs:allow-read",
     "fs:allow-read-dir",
+    "fs:allow-appdata-read",
+    "fs:allow-appdata-write",
+    "fs:allow-appdata-read-recursive",
+    "fs:allow-appdata-write-recursive",
     "sql:default",
+    "sql:allow-load",
     "sql:allow-execute",
+    "sql:allow-select",
     {
       "identifier": "fs:scope",
-      "allow": [{"path": "$HOME/*"}, {"path": "$HOME/**/*"}]
+      "allow": [
+        {"path": "$HOME/*"},
+        {"path": "$HOME/**/*"},
+        {"path": "$APPDATA/*"},
+        {"path": "$APPDATA/**/*"}
+      ]
     }
   ]
 }

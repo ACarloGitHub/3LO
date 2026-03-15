@@ -1,0 +1,36 @@
+# 3LO - File da ignorare
+
+# Dati utente (non versionare)
+/settings/
+/data/
+
+# Dipendenze
+node_modules/
+src-tauri/target/
+
+# Log
+*.log
+logs/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Backup
+*.backup*
+*.sync-conflict*
+
+# Patch temporanei
+*.patch
+
+# Build artifacts
+dist/
+
+# Tauri
+src-tauri/Cargo.lock

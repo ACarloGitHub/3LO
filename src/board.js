@@ -1,7 +1,8 @@
 // Board - Kanban (No Sort, drag only)
-import { getLastExportPath, saveLastExportPath, loadProject, renameProject, saveProject } from './db_sqlite.js';
-import { save as saveDialog } from '@tauri-apps/plugin-dialog';
-import { writeTextFile } from '@tauri-apps/plugin-fs';
+import { getLastExportPath, saveLastExportPath, loadProject, renameProject, saveProject, getJsonPath, saveJsonPath, getProjectLastContentChange } from './db_sqlite.js';
+import { open as openDialog, save as saveDialog, confirm } from '@tauri-apps/plugin-dialog';
+import { readTextFile, writeTextFile } from '@tauri-apps/plugin-fs';
+import { invoke } from '@tauri-apps/api/core';
 
 let columns = [];
 let cardsData = {};
@@ -14,7 +15,7 @@ const ZOOM_MIN = 0.5;
 const ZOOM_MAX = 2.0;
 const ZOOM_STEP = 0.1;
 
-async function save() {
+async function save(contentChanged = true) {
   // Salva su localStorage (backup)
   localStorage.setItem('3lo_board_' + currentProjectId, JSON.stringify(columns));
   localStorage.setItem('3lo_cards_data_' + currentProjectId, JSON.stringify(cardsData));
@@ -22,7 +23,7 @@ async function save() {
   // Salva su database SQLite (primario)
   if (currentProject) {
     try {
-      await saveProject(currentProject, columns, cardsData);
+      await saveProject(currentProject, columns, cardsData, contentChanged);
     } catch (err) {
       console.error('Errore salvataggio DB:', err);
     }
@@ -35,6 +36,8 @@ async function handleQuickExport() {
     alert('❌ Nessun progetto caricato');
     return;
   }
+  
+  console.log('📤 [EXPORT] Start - Project ID:', currentProjectId);
   
   // Carica dati dal database SQLite
   const projectData = await loadProject(currentProjectId);
@@ -83,10 +86,14 @@ async function handleQuickExport() {
   try {
     // Controlla se c'è un path precedente
     const lastPath = await getLastExportPath(currentProjectId);
+    console.log('📁 [EXPORT] Last path:', lastPath);
     
     if (lastPath) {
       // Sovrascrivi il file esistente
       await writeTextFile(lastPath, jsonStr);
+      // Salva anche come json_path per il refresh
+      await saveJsonPath(currentProjectId, lastPath);
+      console.log('✅ [EXPORT] File aggiornato:', lastPath);
       alert('✅ File aggiornato:\n' + lastPath);
     } else {
       // Nessun path precedente, chiedi dove salvare
@@ -98,16 +105,164 @@ async function handleQuickExport() {
       });
       
       if (!filePath) {
+        console.log('❌ [EXPORT] Salvataggio annullato');
         return; // Annullato
       }
       
       await writeTextFile(filePath, jsonStr);
       await saveLastExportPath(currentProjectId, filePath);
+      await saveJsonPath(currentProjectId, filePath);
+      console.log('✅ [EXPORT] Salvato in:', filePath);
       alert('✅ Salvato in:\n' + filePath);
     }
   } catch (err) {
+    console.error('❌ [EXPORT] Errore:', err);
     alert('❌ Errore: ' + err.message);
-    console.error('Quick export error:', err);
+  }
+}
+
+// REFRESH - Confronta timestamp e sincronizza (VERSIONE CORRETTA)
+async function handleRefresh() {
+  if (!currentProjectId) {
+    alert('❌ Nessun progetto caricato');
+    return;
+  }
+  
+  try {
+    console.log('🔄 [REFRESH] Start - Project ID:', currentProjectId);
+    
+    // 1. Controlla se c'è un file JSON associato (CON RETRY)
+    let jsonPath = await getJsonPath(currentProjectId);
+    console.log('📁 [REFRESH] JSON Path from DB:', jsonPath);
+    
+    // Se non c'è, chiedi all'utente di selezionarlo
+    if (!jsonPath) {
+      console.log('⚠️ [REFRESH] Nessun path salvato, apro dialog selezione file');
+      
+      try {
+        const selected = await openDialog({
+          title: 'Seleziona file JSON del progetto',
+          multiple: false,
+          filters: [{ name: 'JSON', extensions: ['json'] }]
+        });
+        
+        if (!selected) {
+          console.log('❌ [REFRESH] Selezione annullata dall\'utente');
+          return; // Annullato correttamente
+        }
+        
+        jsonPath = selected;
+        await saveJsonPath(currentProjectId, jsonPath);
+        console.log('✅ [REFRESH] Path salvato:', jsonPath);
+      } catch (dialogErr) {
+        console.error('❌ [REFRESH] Errore dialog:', dialogErr);
+        alert('❌ Errore apertura dialog: ' + dialogErr.message);
+        return;
+      }
+    }
+
+    // 2. Verifica che il file esista e leggi contenuto
+    let fileContent = null;
+    let fileModifiedTime = 0;
+
+    try {
+      console.log('📖 [REFRESH] Leggo file:', jsonPath);
+      fileContent = await readTextFile(jsonPath);
+      
+      // Ottieni timestamp reale del file tramite Rust
+      try {
+        fileModifiedTime = await invoke('get_file_modified_time', { path: jsonPath });
+        console.log('📅 [REFRESH] File modified:', new Date(fileModifiedTime).toLocaleString());
+      } catch (tsErr) {
+        console.warn('⚠️ [REFRESH] Non posso leggere timestamp file, uso exportedAt:', tsErr);
+        // Fallback: usa exportedAt dal JSON stesso
+        const tempData = JSON.parse(fileContent);
+        fileModifiedTime = new Date(tempData.exportedAt || Date.now()).getTime();
+      }
+    } catch (e) {
+      console.error('❌ [REFRESH] Errore lettura file:', e);
+      const resetPath = confirm('❌ File non trovato:\n' + jsonPath + '\n\nVuoi selezionare un nuovo file?');
+      if (resetPath) {
+        await saveJsonPath(currentProjectId, null); // Reset path
+        return handleRefresh(); // Ricomincia
+      }
+      return;
+    }
+
+    // 3. Ottieni last_content_change del database (ignora salvataggi automatici)
+    const dbContentChange = await getProjectLastContentChange(currentProjectId);
+    const dbContentChangeTime = dbContentChange || 0;
+    console.log('📅 [REFRESH] DB Content Change:', new Date(dbContentChangeTime).toLocaleString());
+    
+    // 4. CONFRONTA TIMESTAMP
+    const fileDate = new Date(fileModifiedTime).toLocaleString('it-IT');
+    const dbDate = new Date(dbContentChangeTime).toLocaleString('it-IT');
+    const timeDiff = Math.abs(fileModifiedTime - dbContentChangeTime);
+    const fileIsNewer = fileModifiedTime > dbContentChangeTime;
+    
+    console.log('⚖️ [REFRESH] Confronto:', { 
+      file: fileDate, 
+      db: dbDate, 
+      fileIsNewer: fileIsNewer,
+      diffMs: timeDiff
+    });
+
+    // 5. Mostra all'utente quale versione è più recente
+    const newerSource = fileIsNewer ? 'FILE JSON' : 'PROGETTO 3LO';
+    const timeDiffText = timeDiff < 5000 ? 
+      '(⚠️ file appena esportato!)' : 
+      `(differenza: ${Math.round(timeDiff/1000)} secondi)`;
+    
+    const action = await confirm(
+      `🔄 SINCRONIZZAZIONE\n\n` +
+      `📁 File JSON: ${fileDate}\n` +
+      `💾 Database 3LO: ${dbDate}\n` +
+      `⏱️ ${timeDiffText}\n\n` +
+      `✅ La versione più recente è: ${newerSource}\n\n` +
+      `OK = IMPORTA dal file JSON (sovrascrive 3LO)\n` +
+      `Annulla = ESPORTA su file JSON (sovrascrive file)`,
+      {
+        title: 'Sincronizzazione',
+        okLabel: 'IMPORTA da JSON',
+        cancelLabel: 'ESPORTA su JSON'
+      }
+    );
+
+    // 6. Esegui l'azione scelta
+    if (action === true) {
+      console.log('📥 [REFRESH] Importazione da file JSON');
+      const importData = JSON.parse(fileContent);
+      
+      if (importData.project && importData.board) {
+        // Aggiorna dati in memoria
+        columns = importData.board || [];
+        cardsData = importData.cards || {};
+        
+        // Aggiorna currentProject se necessario
+        if (importData.project.id === currentProjectId) {
+          currentProject = importData.project;
+        }
+        
+        // Salva nel DB (aggiorna last_modified)
+        await saveProject(importData.project, columns, cardsData);
+        
+        // Ricarica la board
+        render();
+        
+        alert('✅ Importato dal file JSON!');
+        console.log('✅ [REFRESH] Import completato');
+      } else {
+        alert('❌ Formato file non valido');
+        console.error('❌ [REFRESH] Formato non valido');
+      }
+    } else {
+      console.log('📤 [REFRESH] Esportazione su file JSON');
+      // ESPORTA su file JSON (usa handleQuickExport)
+      await handleQuickExport();
+    }
+  } catch (err) {
+    console.error('❌ [REFRESH] Errore critico:', err);
+    alert('❌ Errore refresh: ' + err.message + '\n\nControlla la console per dettagli.');
   }
 }
 
@@ -233,7 +388,7 @@ function createCard(card) {
   // Elimina scheda
   cardEl.querySelector(".card-delete-btn").addEventListener("click", async (e) => {
     e.stopPropagation();
-    if (confirm("Eliminare questa scheda?")) {
+    if (await confirm("Eliminare questa scheda?", { title: 'Elimina scheda', okLabel: 'Elimina', cancelLabel: 'Annulla' })) {
       // Trova la colonna e rimuovi la scheda
       const colEl = cardEl.closest(".column");
       const colId = colEl.dataset.id;
@@ -421,9 +576,9 @@ window.addEventListener('beforeunload', () => {
   localStorage.setItem('3lo_cards_data_' + currentProjectId, JSON.stringify(cardsData));
 });
 
-// Per Tauri: gestione chiusura finestra
+// Per Tauri: gestione chiusura finestra - SALVA SENZA AGGIORNARE last_content_change
 if (window.__TAURI__) {
-  window.addEventListener('blur', () => save()); // Salva quando perde focus
+  window.addEventListener('blur', () => save(false)); // Salva ma contentChanged = false
 }
 
 document.getElementById('add-list').addEventListener('click', async () => {
@@ -442,7 +597,7 @@ document.getElementById("zoom-out").addEventListener("click", zoomOut);
 document.getElementById("zoom-reset").addEventListener("click", resetZoom);
 
 // Event listener per quick export (🔄 Aggiorna)
-document.getElementById('quick-export').addEventListener('click', handleQuickExport);
+document.getElementById('quick-export').addEventListener('click', handleRefresh);
 
 init();
   // Inizializza zoom dopo aver caricato il progetto
