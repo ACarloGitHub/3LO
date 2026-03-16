@@ -287,63 +287,6 @@ export async function getProjectOwners(projectId) {
   return result;
 }
 
-// Verify if user can modify project
-export async function canModifyProject(projectId, userId = null) {
-  const db = await initDB();
-  
-  const result = await db.select(
-    'SELECT is_visible, is_locked, created_by FROM projects WHERE id = ?',
-    [projectId]
-  );
-  
-  if (result.length === 0) {
-    return false;
-  }
-  
-  const project = result[0];
-  
-  // If not logged in, can't modify
-  if (!userId) return false;
-  
-  // Check if user is owner or in shared list
-  const isOwner = await isProjectOwner(projectId, userId);
-  if (isOwner) return true;
-  
-  // Check shared permissions (TODO: implement shared permissions table)
-  // For now, only owners can modify
-  return false;
-}
-
-// Verify if user can view project
-export async function canViewProject(projectId, userId = null) {
-  const db = await initDB();
-  
-  const result = await db.select(
-    'SELECT is_visible, is_locked, created_by FROM projects WHERE id = ?',
-    [projectId]
-  );
-  
-  if (result.length === 0) {
-    return false;
-  }
-  
-  const project = result[0];
-  
-  // If project is visible, everyone can see it
-  if (project.is_visible === 1) {
-    return true;
-  }
-  
-  // If project is not visible, only owner/shared users can see it
-  if (!userId) return false;
-  
-  const isOwner = await isProjectOwner(projectId, userId);
-  if (isOwner) return true;
-  
-  // TODO: Check if user is in shared list
-  return false;
-}
-
 // Get visible projects for user
 export async function getVisibleProjects(userId = null) {
   const db = await initDB();
