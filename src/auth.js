@@ -258,6 +258,22 @@ export async function addProjectOwner(projectId, newOwnerUsername, sessionId) {
   );
 }
 
+// Get username by user ID
+export async function getUsernameById(userId) {
+  const db = await initDB();
+  
+  const result = await db.select(
+    'SELECT username FROM users WHERE id = ?',
+    [userId]
+  );
+  
+  if (result.length === 0) {
+    return null;
+  }
+  
+  return result[0].username;
+}
+
 // === UTILITIES ===
 
 // Verify if user is owner of project

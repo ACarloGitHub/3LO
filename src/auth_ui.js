@@ -24,33 +24,23 @@ export async function initAuth() {
     loginModal.style.display = 'none';
   }
   
-  // Load saved session
+  // LOGOUT AT STARTUP - Clear any saved session for security
+  // User must login again every time the app starts
   const savedSession = localStorage.getItem('3lo_session');
-  console.log('🔧 initAuth - savedSession:', savedSession ? 'exists' : 'none');
-  
   if (savedSession) {
+    console.log('🔧 initAuth - clearing saved session (security logout)');
     try {
-      const session = await verifySession(savedSession);
-      console.log('🔧 initAuth - session verified:', session);
-      if (session) {
-        currentSessionId = savedSession;
-        currentUser = { id: session.userId, username: session.username };
-        updateUIForLoggedIn();
-      } else {
-        // Session expired
-        console.log('🔧 initAuth - session expired');
-        localStorage.removeItem('3lo_session');
-        updateUIForLoggedOut();
-      }
+      await logoutUser(savedSession);
     } catch (e) {
-      console.error('🔧 initAuth - error:', e);
-      localStorage.removeItem('3lo_session');
-      updateUIForLoggedOut();
+      // Ignore errors - session might not exist in DB
     }
-  } else {
-    console.log('🔧 initAuth - no session, showing logged out');
-    updateUIForLoggedOut();
+    localStorage.removeItem('3lo_session');
   }
+  
+  // Always start logged out
+  currentSessionId = null;
+  currentUser = null;
+  updateUIForLoggedOut();
   
   setupEventListeners();
 }

@@ -9,7 +9,8 @@ import {
   toggleProjectVisibility, 
   toggleProjectLocked,
   getUsersWithShareStatus,
-  setProjectShare
+  setProjectShare,
+  getUsernameById
 } from './auth.js';
 
 let projects = [];
@@ -74,6 +75,32 @@ function formatDate(ts) {
   }
 }
 
+// Generate initials from username (e.g., "Carlo Piras" -> "CP", "Carlo" -> "CARR")
+function getInitials(username) {
+  if (!username) return '';
+  const parts = username.trim().split(/\s+/);
+  if (parts.length === 1) {
+    return parts[0].substring(0, 4).toUpperCase();
+  }
+  return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
+}
+
+// Cache for usernames to avoid repeated DB calls
+const usernameCache = {};
+
+async function getOwnerInitials(userId) {
+  if (!userId) return '';
+  if (usernameCache[userId]) {
+    return getInitials(usernameCache[userId]);
+  }
+  const username = await getUsernameById(userId);
+  if (username) {
+    usernameCache[userId] = username;
+    return getInitials(username);
+  }
+  return '';
+}
+
 // ==========================================
 // RENDER
 // ==========================================
@@ -120,6 +147,10 @@ async function render() {
     const visibilityIcon = isVisible ? '🐵' : '🙈';
     const lockedIcon = isLocked ? '🔒' : '🔓';
     
+    // Get owner initials
+    const ownerInitials = await getOwnerInitials(proj.created_by);
+    const ownerBadge = ownerInitials ? `<span class="owner-initials" title="Owner: ${usernameCache[proj.created_by] || 'Unknown'}">${ownerInitials}</span>` : '';
+    
     const card = document.createElement('div');
     card.className = 'project-card';
     card.dataset.id = proj.id;
@@ -133,13 +164,14 @@ async function render() {
         </div>
       </div>
       <div class="project-card-right">
+        ${ownerBadge}
         <div class="project-icon">🌙</div>
         <div class="project-title">${proj.name}</div>
         <div class="project-meta">${formatDate(proj.created)}</div>
         ${canClaim ? '<button class="btn-claim" data-id="' + proj.id + '" title="Claim this project">🏷️ Claim</button>' : ''}
         <div class="project-actions">
           <button class="btn-open" data-id="${proj.id}" ${!canOpen ? 'disabled' : ''} title="${!canOpen ? 'Project is locked' : 'Open project'}">Open</button>
-          <button class="btn-rename" data-id="${proj.id}">Ren</button>
+          <button class="btn-ren" data-id="${proj.id}">Ren</button>
           <button class="btn-export" data-id="${proj.id}">Exp</button>
           <button class="btn-delete" data-id="${proj.id}">Del</button>
         </div>

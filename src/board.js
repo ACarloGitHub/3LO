@@ -3,11 +3,44 @@ import { getLastExportPath, saveLastExportPath, loadProject, renameProject, save
 import { open as openDialog, save as saveDialog, confirm } from '@tauri-apps/plugin-dialog';
 import { readTextFile, writeTextFile } from '@tauri-apps/plugin-fs';
 import { invoke } from '@tauri-apps/api/core';
+import { getCurrentWindow } from '@tauri-apps/api/window';
+import { verifySession, logoutUser } from './auth.js';
 
 let columns = [];
 let cardsData = {};
 let currentProjectId = null;
 let currentProject = null;  // Oggetto progetto completo per salvataggio DB
+
+// === USER INITIALS SYSTEM ===
+let currentUser = null;
+
+// Get current user from session
+async function loadCurrentUser() {
+  const sessionId = localStorage.getItem('3lo_session');
+  if (sessionId) {
+    currentUser = await verifySession(sessionId);
+  }
+  return currentUser;
+}
+
+// Generate initials from username (e.g., "Carlo Piras" -> "CP", "Carlo" -> "CARLO")
+function getInitials(username) {
+  if (!username) return '';
+  const parts = username.trim().split(/\s+/);
+  if (parts.length === 1) {
+    // Single name - return first 4 letters (or full name if shorter)
+    return parts[0].substring(0, 4).toUpperCase();
+  }
+  // First letter of first name + first letter of last name
+  return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
+}
+
+// Get initials badge HTML
+function getInitialsBadge(username, extraClass = '') {
+  const initials = getInitials(username);
+  if (!initials) return '';
+  return `<span class="user-initials ${extraClass}">${initials}</span>`;
+}
 
 // Zoom state per zoom fluido
 let zoomLevel = 1.0;
@@ -278,12 +311,18 @@ function initCardData(cardId) {
 
 function openNote(cardId) {
   initCardData(cardId);
+  
+  // Get initials for the note creator
+  const noteInitials = cardsData[cardId].note_created_by_username 
+    ? getInitialsBadge(cardsData[cardId].note_created_by_username, 'note-initials') 
+    : '';
+  
   const modal = document.createElement('div');
   modal.className = 'card-note-modal active';
   modal.innerHTML = `
     <div class="card-note-content">
       <div class="card-note-header">
-        <h3>Card Note</h3>
+        <h3>Card Note ${noteInitials}</h3>
         <button class="btn-secondary" onclick="this.closest('.card-note-modal').remove()">Close</button>
       </div>
       <textarea class="card-note-textarea" placeholder="Add notes...">${cardsData[cardId].note}</textarea>
@@ -294,6 +333,11 @@ function openNote(cardId) {
   modal.querySelector('#save-note').addEventListener('click', async () => {
     cardsData[cardId].note = modal.querySelector('.card-note-textarea').value;
     cardsData[cardId].modified = Date.now();
+    // Save note creator if user is logged in
+    if (currentUser?.username) {
+      cardsData[cardId].note_created_by = currentUser.userId;
+      cardsData[cardId].note_created_by_username = currentUser.username;
+    }
     await save();
     modal.remove();
   });
@@ -304,10 +348,15 @@ function createColumn(column) {
   const colEl = document.createElement('div');
   colEl.className = 'column';
   colEl.dataset.id = column.id;
+  
+  // Get initials for the column creator (shown in header, to the right)
+  const columnInitialsHtml = column.created_by_username ? getInitialsBadge(column.created_by_username, 'column-initials') : '';
+  
   colEl.innerHTML = `
     <div class="column-header">
       <div class="column-drag-handle" title="Drag to move list">⋮⋮</div>
       <div class="column-title" contenteditable="true">${column.title}</div>
+      ${columnInitialsHtml}
       <button class="column-delete">×</button>
     </div>
     <div class="cards" data-column-id="${column.id}"></div>
@@ -364,6 +413,10 @@ function createCard(card) {
   const cardEl = document.createElement('div');
   cardEl.className = 'card';
   cardEl.dataset.id = card.id;
+  
+  // Get initials for the card creator (shown next to delete button)
+  const initialsHtml = card.created_by_username ? getInitialsBadge(card.created_by_username, 'card-initials') : '';
+  
   cardEl.innerHTML = `
     <div class="card-left">
       <div class="card-drag-handle" title="Drag to move card">⋮⋮</div>
@@ -372,7 +425,7 @@ function createCard(card) {
       <div class="card-text" contenteditable="true">${card.text}</div>
       <div class="card-actions">
         <button class="card-note-btn">📝 Note</button>
-        <button class="card-delete-btn" title="Elimina scheda">🗑️</button>
+        <button class="card-delete-btn" title="Elimina scheda">🗑️ ${initialsHtml}</button>
       </div>
     </div>
   `;
@@ -449,7 +502,12 @@ function addCard(container, columnId) {
   addBtn.addEventListener('click', async () => {
     if (textarea.value.trim()) {
       const cardId = Date.now().toString();
-      const card = { id: cardId, text: textarea.value.trim() };
+      const card = { 
+        id: cardId, 
+        text: textarea.value.trim(),
+        created_by: currentUser?.userId || null,
+        created_by_username: currentUser?.username || null
+      };
       initCardData(cardId);
       cardsData[cardId].created = Date.now();
       cardsData[cardId].modified = Date.now();
@@ -492,6 +550,9 @@ async function init() {
     window.location.href = './index.html';
     return;
   }
+  
+  // Carica utente corrente
+  await loadCurrentUser();
   
   // Carica progetto dal database SQLite
   const projectData = await loadProject(currentProjectId);
@@ -590,16 +651,36 @@ window.addEventListener('beforeunload', () => {
   localStorage.setItem('3lo_cards_data_' + currentProjectId, JSON.stringify(cardsData));
 });
 
-// Per Tauri: gestione chiusura finestra - SALVA SENZA AGGIORNARE last_content_change
+// Per Tauri: gestione chiusura finestra
 if (window.__TAURI__) {
   window.addEventListener('blur', () => save(false)); // Salva ma contentChanged = false
+  
+  // Logout alla chiusura della finestra
+  getCurrentWindow().onCloseRequested(async (event) => {
+    console.log('[AUTH] Window closing, logging out...');
+    const sessionId = localStorage.getItem('3lo_session');
+    if (sessionId) {
+      try {
+        await logoutUser(sessionId);
+      } catch (e) {
+        // Ignore errors
+      }
+      localStorage.removeItem('3lo_session');
+    }
+  });
 }
 
 document.getElementById('add-list').addEventListener('click', async () => {
   const title = prompt('List name:');
   if (title) {
     const colId = Date.now().toString();
-    columns.push({ id: colId, title, cards: [] });
+    columns.push({ 
+      id: colId, 
+      title, 
+      cards: [],
+      created_by: currentUser?.userId || null,
+      created_by_username: currentUser?.username || null
+    });
     render();
     await save();
   }
