@@ -265,6 +265,11 @@ body {
 }
 
 .btn-open { background: #6366f1; color: white; }
+.btn-open:disabled {
+  background: rgba(99, 102, 241, 0.3);
+  color: rgba(255, 255, 255, 0.4);
+  cursor: not-allowed;
+}
 .btn-note { background: rgba(99, 102, 241, 0.3); color: #818cf8; }
 .btn-export { background: rgba(255, 255, 255, 0.15); color: white; }
 .btn-delete { background: rgba(239, 68, 68, 0.3); color: #ef4444; }

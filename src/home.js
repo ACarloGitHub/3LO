@@ -113,6 +113,9 @@ async function render() {
     const canClaim = isOrphan && isLogged;
     const isOwner = isLogged && proj.created_by === user?.id;
     
+    // Se il progetto è bloccato e l'utente non è loggato/proprietario, non può aprire
+    const canOpen = !isLocked || isOwner;
+    
     // Icone visibilità (solo owner può cliccare)
     const visibilityIcon = isVisible ? '🐵' : '🙈';
     const lockedIcon = isLocked ? '🔒' : '🔓';
@@ -135,7 +138,7 @@ async function render() {
         <div class="project-meta">${formatDate(proj.created)}</div>
         ${canClaim ? '<button class="btn-claim" data-id="' + proj.id + '" title="Claim this project">🏷️ Claim</button>' : ''}
         <div class="project-actions">
-          <button class="btn-open" data-id="${proj.id}">Open</button>
+          <button class="btn-open" data-id="${proj.id}" ${!canOpen ? 'disabled' : ''} title="${!canOpen ? 'Project is locked' : 'Open project'}">Open</button>
           <button class="btn-rename" data-id="${proj.id}">Ren</button>
           <button class="btn-export" data-id="${proj.id}">Exp</button>
           <button class="btn-delete" data-id="${proj.id}">Del</button>

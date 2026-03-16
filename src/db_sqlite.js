@@ -135,8 +135,8 @@ export async function initDB() {
     // Colonna già esistente
   }
   
-  // Migrazione: converti visibility (stringa) → is_visible + is_locked
-  const projectsToMigrate = await db.select(`SELECT id, visibility FROM projects WHERE visibility IS NOT NULL`);
+  // Migrazione: converti visibility (stringa) → is_visible + is_locked (solo se is_visible è NULL)
+  const projectsToMigrate = await db.select(`SELECT id, visibility FROM projects WHERE visibility IS NOT NULL AND is_visible IS NULL`);
   for (const proj of projectsToMigrate) {
     let isVisible = 1;
     let isLocked = 0;
@@ -148,7 +148,7 @@ export async function initDB() {
         break;
       case 'public_ro':
         isVisible = 1;
-        isLocked = 0; // locked riguarda l'apertura, non la modifica
+        isLocked = 0;
         break;
       case 'locked':
         isVisible = 1;
