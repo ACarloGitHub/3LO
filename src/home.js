@@ -4,7 +4,15 @@ import { save, confirm } from '@tauri-apps/plugin-dialog';
 import { writeTextFile } from '@tauri-apps/plugin-fs';
 import logger from './logger.js';
 import { initAuth, isLoggedIn, getCurrentUser, getSessionId } from './auth_ui.js';
-import { claimProject, toggleProjectVisibility, toggleProjectLocked } from './auth.js';
+import { 
+  claimProject, 
+  toggleProjectVisibility, 
+  toggleProjectLocked,
+  getProjectShares,
+  setProjectShare,
+  removeProjectShare,
+  getSharePermissions
+} from './auth.js';
 
 let projects = [];
 let currentSortMode = 'custom';
@@ -200,8 +208,8 @@ function setupEventDelegation() {
         } else if (iconType === 'locked') {
           await toggleProjectLocked(projectId, sessionId);
         } else if (iconType === 'shared') {
-          // TODO: Apri dialogo condivisione (punto 4)
-          alert('Shared settings - coming soon!');
+          // Open share dialog
+          await openShareDialog(projectId);
           return;
         }
         await loadProjects();
@@ -367,6 +375,117 @@ async function handleExport(proj) {
     logger.error('home', `Export error: ${err.message}`);
     alert('❌ Error saving:\n' + err.message);
   }
+}
+
+// ==========================================
+// SHARE DIALOG
+// ==========================================
+
+let currentShareProjectId = null;
+
+async function openShareDialog(projectId) {
+  currentShareProjectId = projectId;
+  const sessionId = getSessionId();
+  
+  if (!sessionId) {
+    alert('You must be logged in to manage sharing.');
+    return;
+  }
+  
+  // Get current shares
+  const shares = await getProjectShares(projectId);
+  
+  // Create modal HTML
+  const modal = document.createElement('div');
+  modal.id = 'share-modal';
+  modal.className = 'share-modal';
+  modal.innerHTML = `
+    <div class="share-modal-content">
+      <div class="share-modal-header">
+        <h3>Share Project</h3>
+        <button class="share-modal-close">×</button>
+      </div>
+      <div class="share-modal-body">
+        <div class="share-add-user">
+          <input type="text" id="share-username" placeholder="Username to share with">
+          <div class="share-permissions">
+            <label><input type="checkbox" id="perm-view" checked> Can View</label>
+            <label><input type="checkbox" id="perm-open"> Can Open</label>
+            <label><input type="checkbox" id="perm-edit"> Can Edit</label>
+          </div>
+          <button id="btn-add-share">Add User</button>
+        </div>
+        <div class="share-list">
+          <h4>Shared With:</h4>
+          <div id="share-users-list">
+            ${shares.length === 0 ? '<p class="share-empty">No users shared yet</p>' : shares.map(s => `
+              <div class="share-user-row" data-userid="${s.userId}">
+                <span class="share-username">${s.username}</span>
+                <div class="share-user-perms">
+                  <span class="perm-badge ${s.canView ? 'active' : ''}" title="Can View">👁️</span>
+                  <span class="perm-badge ${s.canOpen ? 'active' : ''}" title="Can Open">🔓</span>
+                  <span class="perm-badge ${s.canEdit ? 'active' : ''}" title="Can Edit">✏️</span>
+                </div>
+                <button class="btn-remove-share" data-userid="${s.userId}">Remove</button>
+              </div>
+            `).join('')}
+          </div>
+        </div>
+      </div>
+    </div>
+  `;
+  
+  document.body.appendChild(modal);
+  
+  // Event listeners
+  modal.querySelector('.share-modal-close').addEventListener('click', closeShareDialog);
+  modal.addEventListener('click', (e) => {
+    if (e.target === modal) closeShareDialog();
+  });
+  
+  modal.querySelector('#btn-add-share').addEventListener('click', async () => {
+    const username = document.getElementById('share-username').value.trim();
+    if (!username) {
+      alert('Please enter a username');
+      return;
+    }
+    
+    const permissions = {
+      canView: document.getElementById('perm-view').checked,
+      canOpen: document.getElementById('perm-open').checked,
+      canEdit: document.getElementById('perm-edit').checked
+    };
+    
+    try {
+      await setProjectShare(projectId, username, permissions, sessionId);
+      closeShareDialog();
+      openShareDialog(projectId); // Refresh
+    } catch (err) {
+      alert('Error: ' + err.message);
+    }
+  });
+  
+  // Remove share buttons
+  modal.querySelectorAll('.btn-remove-share').forEach(btn => {
+    btn.addEventListener('click', async (e) => {
+      const userId = e.target.dataset.userid;
+      try {
+        await removeProjectShare(projectId, userId, sessionId);
+        closeShareDialog();
+        openShareDialog(projectId); // Refresh
+      } catch (err) {
+        alert('Error: ' + err.message);
+      }
+    });
+  });
+}
+
+function closeShareDialog() {
+  const modal = document.getElementById('share-modal');
+  if (modal) {
+    modal.remove();
+  }
+  currentShareProjectId = null;
 }
 
 // ==========================================

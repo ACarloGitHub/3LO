@@ -173,6 +173,22 @@ export async function initDB() {
     // Colonna già esistente
   }
   
+  // === SISTEMA CONDIVISIONE ===
+  // Tabella project_shares per permessi granulari
+  await db.execute(`
+    CREATE TABLE IF NOT EXISTS project_shares (
+      project_id TEXT NOT NULL,
+      user_id TEXT NOT NULL,
+      can_view INTEGER DEFAULT 0,
+      can_open INTEGER DEFAULT 0,
+      can_edit INTEGER DEFAULT 0,
+      added_at INTEGER NOT NULL,
+      PRIMARY KEY (project_id, user_id),
+      FOREIGN KEY (project_id) REFERENCES projects(id) ON DELETE CASCADE,
+      FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+    )
+  `);
+  
   return db;
 }
 

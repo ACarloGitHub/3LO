@@ -355,14 +355,215 @@ export async function getVisibleProjects(userId = null) {
     );
   }
   
-  // Logged in: visible projects + owned projects (even if not visible)
+  // Logged in: visible projects + owned projects (even if not visible) + shared projects
   return db.select(`
     SELECT DISTINCT p.id, p.name, p.created, p.is_visible, p.is_locked, p.created_by
     FROM projects p
     LEFT JOIN project_owners po ON p.id = po.project_id
+    LEFT JOIN project_shares ps ON p.id = ps.project_id AND ps.user_id = ?
     WHERE p.is_visible = 1
        OR po.user_id = ?
        OR p.created_by = ?
+       OR ps.can_view = 1
     ORDER BY p.sort_order ASC, p.created DESC
-  `, [userId, userId]);
+  `, [userId, userId, userId, userId]);
+}
+
+// === PROJECT SHARING ===
+
+// Get all shares for a project
+export async function getProjectShares(projectId) {
+  const db = await initDB();
+  
+  const result = await db.select(`
+    SELECT u.id, u.username, ps.can_view, ps.can_open, ps.can_edit, ps.added_at
+    FROM project_shares ps
+    JOIN users u ON ps.user_id = u.id
+    WHERE ps.project_id = ?
+    ORDER BY ps.added_at ASC
+  `, [projectId]);
+  
+  return result.map(row => ({
+    userId: row.id,
+    username: row.username,
+    canView: row.can_view === 1,
+    canOpen: row.can_open === 1,
+    canEdit: row.can_edit === 1,
+    addedAt: row.added_at
+  }));
+}
+
+// Add or update share for a project
+export async function setProjectShare(projectId, username, permissions, sessionId) {
+  const db = await initDB();
+  
+  const session = await verifySession(sessionId);
+  if (!session) {
+    throw new Error('Unauthorized');
+  }
+  
+  // Verify ownership
+  const isOwner = await isProjectOwner(projectId, session.userId);
+  if (!isOwner) {
+    throw new Error('You are not the owner of this project');
+  }
+  
+  // Find user to share with
+  const user = await db.select('SELECT id FROM users WHERE username = ?', [username]);
+  if (user.length === 0) {
+    throw new Error('User not found');
+  }
+  
+  const targetUserId = user[0].id;
+  const now = Date.now();
+  
+  // Insert or update share
+  await db.execute(`
+    INSERT INTO project_shares (project_id, user_id, can_view, can_open, can_edit, added_at)
+    VALUES (?, ?, ?, ?, ?, ?)
+    ON CONFLICT(project_id, user_id) DO UPDATE SET
+      can_view = excluded.can_view,
+      can_open = excluded.can_open,
+      can_edit = excluded.can_edit
+  `, [
+    projectId,
+    targetUserId,
+    permissions.canView ? 1 : 0,
+    permissions.canOpen ? 1 : 0,
+    permissions.canEdit ? 1 : 0,
+    now
+  ]);
+}
+
+// Remove share from a project
+export async function removeProjectShare(projectId, targetUserId, sessionId) {
+  const db = await initDB();
+  
+  const session = await verifySession(sessionId);
+  if (!session) {
+    throw new Error('Unauthorized');
+  }
+  
+  // Verify ownership
+  const isOwner = await isProjectOwner(projectId, session.userId);
+  if (!isOwner) {
+    throw new Error('You are not the owner of this project');
+  }
+  
+  await db.execute(
+    'DELETE FROM project_shares WHERE project_id = ? AND user_id = ?',
+    [projectId, targetUserId]
+  );
+}
+
+// Get share permissions for a specific user on a project
+export async function getSharePermissions(projectId, userId) {
+  if (!userId) return null;
+  
+  const db = await initDB();
+  const result = await db.select(
+    'SELECT can_view, can_open, can_edit FROM project_shares WHERE project_id = ? AND user_id = ?',
+    [projectId, userId]
+  );
+  
+  if (result.length === 0) {
+    return null;
+  }
+  
+  return {
+    canView: result[0].can_view === 1,
+    canOpen: result[0].can_open === 1,
+    canEdit: result[0].can_edit === 1
+  };
+}
+
+// Check if user can open a project (considering locked status and shares)
+export async function canOpenProject(projectId, userId = null) {
+  const db = await initDB();
+  
+  const result = await db.select(
+    'SELECT is_locked, created_by FROM projects WHERE id = ?',
+    [projectId]
+  );
+  
+  if (result.length === 0) {
+    return false;
+  }
+  
+  const project = result[0];
+  
+  // If not locked, everyone can open
+  if (project.is_locked !== 1) {
+    return true;
+  }
+  
+  // If locked, only owner or shared users with can_open can open
+  if (!userId) return false;
+  
+  const isOwner = await isProjectOwner(projectId, userId);
+  if (isOwner) return true;
+  
+  const sharePerms = await getSharePermissions(projectId, userId);
+  if (sharePerms && sharePerms.canOpen) return true;
+  
+  return false;
+}
+
+// Update canModifyProject to consider shares
+export async function canModifyProject(projectId, userId = null) {
+  const db = await initDB();
+  
+  const result = await db.select(
+    'SELECT is_visible, is_locked, created_by FROM projects WHERE id = ?',
+    [projectId]
+  );
+  
+  if (result.length === 0) {
+    return false;
+  }
+  
+  // If not logged in, can't modify
+  if (!userId) return false;
+  
+  // Check if user is owner
+  const isOwner = await isProjectOwner(projectId, userId);
+  if (isOwner) return true;
+  
+  // Check shared permissions
+  const sharePerms = await getSharePermissions(projectId, userId);
+  if (sharePerms && sharePerms.canEdit) return true;
+  
+  return false;
+}
+
+// Update canViewProject to consider shares
+export async function canViewProject(projectId, userId = null) {
+  const db = await initDB();
+  
+  const result = await db.select(
+    'SELECT is_visible, is_locked, created_by FROM projects WHERE id = ?',
+    [projectId]
+  );
+  
+  if (result.length === 0) {
+    return false;
+  }
+  
+  const project = result[0];
+  
+  // If project is visible, everyone can see it
+  if (project.is_visible === 1) {
+    return true;
+  }
+  
+  // If project is not visible, only owner or shared users with can_view can see it
+  if (!userId) return false;
+  
+  const isOwner = await isProjectOwner(projectId, userId);
+  if (isOwner) return true;
+  
+  const sharePerms = await getSharePermissions(projectId, userId);
+  if (sharePerms && sharePerms.canView) return true;
+  
+  return false;
 }
