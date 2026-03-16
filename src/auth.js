@@ -251,16 +251,16 @@ export async function releaseProject(projectId, sessionId) {
     throw new Error('Only the owner can release this project');
   }
   
-  // Remove ownership
+  // Remove ownership and reset all states to public/visible/unlocked
   await db.execute(
-    'UPDATE projects SET created_by = NULL, visibility = ? WHERE id = ?',
+    'UPDATE projects SET created_by = NULL, visibility = ?, is_visible = 1, is_locked = 0 WHERE id = ?',
     ['public', projectId]
   );
   
   // Remove from project_owners
   await db.execute(
-    'DELETE FROM project_owners WHERE project_id = ? AND user_id = ?',
-    [projectId, session.userId]
+    'DELETE FROM project_owners WHERE project_id = ?',
+    [projectId]
   );
 }
 
