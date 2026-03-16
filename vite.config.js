@@ -23,6 +23,15 @@ export default defineConfig({
     // Output directory (relative to root)
     outDir: '../dist',
     emptyOutDir: true,
+    // Externalize Tauri plugins (they are provided at runtime)
+    rollupOptions: {
+      external: [
+        '@tauri-apps/api',
+        '@tauri-apps/plugin-sql',
+        '@tauri-apps/plugin-dialog',
+        '@tauri-apps/plugin-fs',
+      ]
+    }
   },
   
   // Public directory for static assets
