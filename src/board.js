@@ -23,23 +23,31 @@ async function loadCurrentUser() {
   return currentUser;
 }
 
-// Generate initials from username (e.g., "Carlo Piras" -> "CP", "Carlo" -> "CARLO")
+// Generate display name from username (max 16 chars)
+// e.g., "Carlo Piras" -> "Carlo Piras", "VeryLongUsernameHere" -> "VeryLongUsername..."
+function getDisplayName(username) {
+  if (!username) return '';
+  const name = username.trim();
+  if (name.length <= 16) return name;
+  return name.substring(0, 13) + '...';
+}
+
+// Get initials from username (for small badges)
+// e.g., "Carlo Piras" -> "CP", "Carlo" -> "CARR"
 function getInitials(username) {
   if (!username) return '';
   const parts = username.trim().split(/\s+/);
   if (parts.length === 1) {
-    // Single name - return first 4 letters (or full name if shorter)
     return parts[0].substring(0, 4).toUpperCase();
   }
-  // First letter of first name + first letter of last name
   return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
 }
 
-// Get initials badge HTML
-function getInitialsBadge(username, extraClass = '') {
-  const initials = getInitials(username);
-  if (!initials) return '';
-  return `<span class="user-initials ${extraClass}">${initials}</span>`;
+// Get username badge HTML (shows full name, max 16 chars)
+function getUsernameBadge(username, extraClass = '') {
+  const displayName = getDisplayName(username);
+  if (!displayName) return '';
+  return `<span class="user-initials ${extraClass}">${displayName}</span>`;
 }
 
 // Zoom state per zoom fluido
@@ -314,7 +322,7 @@ function openNote(cardId) {
   
   // Get initials for the note creator
   const noteInitials = cardsData[cardId].note_created_by_username 
-    ? getInitialsBadge(cardsData[cardId].note_created_by_username, 'note-initials') 
+    ? getUsernameBadge(cardsData[cardId].note_created_by_username, 'note-initials') 
     : '';
   
   const modal = document.createElement('div');
@@ -350,7 +358,7 @@ function createColumn(column) {
   colEl.dataset.id = column.id;
   
   // Get initials for the column creator (shown in header, to the right)
-  const columnInitialsHtml = column.created_by_username ? getInitialsBadge(column.created_by_username, 'column-initials') : '';
+  const columnInitialsHtml = column.created_by_username ? getUsernameBadge(column.created_by_username, 'column-initials') : '';
   
   colEl.innerHTML = `
     <div class="column-header">
@@ -415,7 +423,7 @@ function createCard(card) {
   cardEl.dataset.id = card.id;
   
   // Get initials for the card creator (shown next to delete button)
-  const initialsHtml = card.created_by_username ? getInitialsBadge(card.created_by_username, 'card-initials') : '';
+  const initialsHtml = card.created_by_username ? getUsernameBadge(card.created_by_username, 'card-initials') : '';
   
   cardEl.innerHTML = `
     <div class="card-left">

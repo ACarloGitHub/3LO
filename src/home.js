@@ -6,6 +6,7 @@ import logger from './logger.js';
 import { initAuth, isLoggedIn, getCurrentUser, getSessionId } from './auth_ui.js';
 import { 
   claimProject, 
+  releaseProject,
   toggleProjectVisibility, 
   toggleProjectLocked,
   getUsersWithShareStatus,
@@ -75,28 +76,26 @@ function formatDate(ts) {
   }
 }
 
-// Generate initials from username (e.g., "Carlo Piras" -> "CP", "Carlo" -> "CARR")
-function getInitials(username) {
+// Generate display name from username (max 16 chars)
+function getDisplayName(username) {
   if (!username) return '';
-  const parts = username.trim().split(/\s+/);
-  if (parts.length === 1) {
-    return parts[0].substring(0, 4).toUpperCase();
-  }
-  return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
+  const name = username.trim();
+  if (name.length <= 16) return name;
+  return name.substring(0, 13) + '...';
 }
 
 // Cache for usernames to avoid repeated DB calls
 const usernameCache = {};
 
-async function getOwnerInitials(userId) {
+async function getOwnerDisplayName(userId) {
   if (!userId) return '';
   if (usernameCache[userId]) {
-    return getInitials(usernameCache[userId]);
+    return getDisplayName(usernameCache[userId]);
   }
   const username = await getUsernameById(userId);
   if (username) {
     usernameCache[userId] = username;
-    return getInitials(username);
+    return getDisplayName(username);
   }
   return '';
 }
@@ -147,9 +146,13 @@ async function render() {
     const visibilityIcon = isVisible ? '🐵' : '🙈';
     const lockedIcon = isLocked ? '🔒' : '🔓';
     
-    // Get owner initials
-    const ownerInitials = await getOwnerInitials(proj.created_by);
-    const ownerBadge = ownerInitials ? `<span class="owner-initials" title="Owner: ${usernameCache[proj.created_by] || 'Unknown'}">${ownerInitials}</span>` : '';
+    // Get owner name for badge
+    const ownerName = await getOwnerDisplayName(proj.created_by);
+    const ownerBadge = ownerName ? `<span class="owner-initials" title="Owner: ${usernameCache[proj.created_by] || 'Unknown'}">${ownerName}</span>` : '';
+    
+    // Release icon (only for owner of claimed projects)
+    const canRelease = isOwner && !isOrphan;
+    const releaseIcon = canRelease ? `<span class="vis-icon clickable" data-id="${proj.id}" data-type="release" title="Release project (make public)">↩️</span>` : '';
     
     const card = document.createElement('div');
     card.className = 'project-card';
@@ -158,6 +161,7 @@ async function render() {
       <div class="project-card-left">
         <div class="project-drag-handle" title="Drag to reorder">⋮⋮</div>
         <div class="project-visibility-icons">
+          ${releaseIcon}
           <span class="vis-icon ${isOwner ? 'clickable' : ''}" data-id="${proj.id}" data-type="visibility" title="${isVisible ? 'Visible' : 'Invisible'}${isOwner ? ' (click to toggle)' : ''}">${visibilityIcon}</span>
           <span class="vis-icon ${isOwner ? 'clickable' : ''}" data-id="${proj.id}" data-type="locked" title="${isLocked ? 'Locked' : 'Unlocked'}${isOwner ? ' (click to toggle)' : ''}">${lockedIcon}</span>
           <span class="vis-icon ${isOwner ? 'clickable' : ''} shared-icon" data-id="${proj.id}" data-type="shared" title="Shared settings${isOwner ? ' (click to open)' : ''}">👥</span>
@@ -255,6 +259,21 @@ function setupEventDelegation() {
         } else if (iconType === 'shared') {
           // Open share dialog
           await openShareDialog(projectId);
+          return;
+        } else if (iconType === 'release') {
+          // Release project (make it public again)
+          const confirmed = await confirm('Release this project?\n\nIt will become public and you will no longer be the owner.', {
+            title: 'Release Project',
+            okLabel: 'Release',
+            cancelLabel: 'Cancel'
+          });
+          
+          if (!confirmed) return;
+          
+          await releaseProject(projectId, sessionId);
+          await loadProjects();
+          render();
+          alert('Project released successfully!');
           return;
         }
         await loadProjects();

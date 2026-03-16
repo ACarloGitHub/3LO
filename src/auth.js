@@ -228,6 +228,42 @@ export async function claimProject(projectId, sessionId) {
   );
 }
 
+// Release claimed project (make it public again)
+export async function releaseProject(projectId, sessionId) {
+  const db = await initDB();
+  
+  const session = await verifySession(sessionId);
+  if (!session) {
+    throw new Error('You must be logged in to release a project');
+  }
+  
+  // Verify user is the owner
+  const project = await db.select(
+    'SELECT created_by FROM projects WHERE id = ?',
+    [projectId]
+  );
+  
+  if (project.length === 0) {
+    throw new Error('Project not found');
+  }
+  
+  if (project[0].created_by !== session.userId) {
+    throw new Error('Only the owner can release this project');
+  }
+  
+  // Remove ownership
+  await db.execute(
+    'UPDATE projects SET created_by = NULL, visibility = ? WHERE id = ?',
+    ['public', projectId]
+  );
+  
+  // Remove from project_owners
+  await db.execute(
+    'DELETE FROM project_owners WHERE project_id = ? AND user_id = ?',
+    [projectId, session.userId]
+  );
+}
+
 // Add co-owner to project
 export async function addProjectOwner(projectId, newOwnerUsername, sessionId) {
   const db = await initDB();
