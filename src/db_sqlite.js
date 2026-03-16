@@ -120,6 +120,52 @@ export async function initDB() {
     // Colonna già esistente
   }
   
+  // === NUOVO SISTEMA VISIBILITÀ ===
+  // Aggiungi is_visible (boolean, default true)
+  try {
+    await db.execute(`ALTER TABLE projects ADD COLUMN is_visible INTEGER DEFAULT 1`);
+  } catch (e) {
+    // Colonna già esistente
+  }
+  
+  // Aggiungi is_locked (boolean, default 0)
+  try {
+    await db.execute(`ALTER TABLE projects ADD COLUMN is_locked INTEGER DEFAULT 0`);
+  } catch (e) {
+    // Colonna già esistente
+  }
+  
+  // Migrazione: converti visibility (stringa) → is_visible + is_locked
+  const projectsToMigrate = await db.select(`SELECT id, visibility FROM projects WHERE visibility IS NOT NULL`);
+  for (const proj of projectsToMigrate) {
+    let isVisible = 1;
+    let isLocked = 0;
+    
+    switch (proj.visibility) {
+      case 'public_rw':
+        isVisible = 1;
+        isLocked = 0;
+        break;
+      case 'public_ro':
+        isVisible = 1;
+        isLocked = 0; // locked riguarda l'apertura, non la modifica
+        break;
+      case 'locked':
+        isVisible = 1;
+        isLocked = 1;
+        break;
+      case 'private':
+        isVisible = 0;
+        isLocked = 1;
+        break;
+    }
+    
+    await db.execute(
+      `UPDATE projects SET is_visible = ?, is_locked = ? WHERE id = ?`,
+      [isVisible, isLocked, proj.id]
+    );
+  }
+  
   // Migrazione: aggiungi json_path se non esiste
   try {
     await db.execute(`ALTER TABLE project_metadata ADD COLUMN json_path TEXT`);
@@ -139,7 +185,8 @@ export async function getAllProjects() {
     name: row.name,
     created: row.created,
     created_by: row.created_by || null,
-    visibility: row.visibility || 'public_rw'
+    is_visible: row.is_visible !== 0, // Converti 0/1 → boolean
+    is_locked: row.is_locked === 1    // Converti 0/1 → boolean
   }));
 }
 

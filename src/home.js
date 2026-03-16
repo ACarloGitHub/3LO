@@ -4,7 +4,7 @@ import { save, confirm } from '@tauri-apps/plugin-dialog';
 import { writeTextFile } from '@tauri-apps/plugin-fs';
 import logger from './logger.js';
 import { initAuth, isLoggedIn, getCurrentUser, getSessionId } from './auth_ui.js';
-import { claimProject, setProjectVisibility } from './auth.js';
+import { claimProject, toggleProjectVisibility, toggleProjectLocked } from './auth.js';
 
 let projects = [];
 let currentSortMode = 'custom';
@@ -88,31 +88,28 @@ async function render() {
   const user = getCurrentUser();
   const isLogged = isLoggedIn();
   
-  const visibilityOrder = ['public_rw', 'public_ro', 'locked', 'private'];
-  const visibilityIcons = {
-    'public_rw': { icon: '🌐', title: 'Public - Everyone can edit' },
-    'public_ro': { icon: '👁️', title: 'Public (read only)' },
-    'locked': { icon: '🔒', title: 'Locked - Owner only' },
-    'private': { icon: '👤', title: 'Private - Owner only' }
-  };
-  
   for (const proj of sorted) {
-    const visibility = proj.visibility || 'public_rw';
-    const visInfo = visibilityIcons[visibility];
+    const isVisible = proj.is_visible !== false; // default true
+    const isLocked = proj.is_locked === true;
     const isOrphan = !proj.created_by;
     const canClaim = isOrphan && isLogged;
-    const canChangeVisibility = isLogged && proj.created_by === user?.id;
+    const isOwner = isLogged && proj.created_by === user?.id;
+    
+    // Icone visibilità (solo owner può cliccare)
+    const visibilityIcon = isVisible ? '🐵' : '🙈';
+    const lockedIcon = isLocked ? '🔒' : '🔓';
     
     const card = document.createElement('div');
     card.className = 'project-card';
     card.dataset.id = proj.id;
     card.innerHTML = `
-      <span class="visibility-badge ${canChangeVisibility ? 'clickable' : ''}" 
-            title="${visInfo.title}${canChangeVisibility ? ' (click to change)' : ''}" 
-            data-id="${proj.id}"
-            data-visibility="${visibility}">${visInfo.icon}</span>
       <div class="project-card-left">
         <div class="project-drag-handle" title="Drag to reorder">⋮⋮</div>
+        <div class="project-visibility-icons">
+          <span class="vis-icon ${isOwner ? 'clickable' : ''}" data-id="${proj.id}" data-type="visibility" title="${isVisible ? 'Visible' : 'Invisible'}${isOwner ? ' (click to toggle)' : ''}">${visibilityIcon}</span>
+          <span class="vis-icon ${isOwner ? 'clickable' : ''}" data-id="${proj.id}" data-type="locked" title="${isLocked ? 'Locked' : 'Unlocked'}${isOwner ? ' (click to toggle)' : ''}">${lockedIcon}</span>
+          <span class="vis-icon ${isOwner ? 'clickable' : ''} shared-icon" data-id="${proj.id}" data-type="shared" title="Shared settings${isOwner ? ' (click to open)' : ''}">👥</span>
+        </div>
       </div>
       <div class="project-card-right">
         <div class="project-icon">🌙</div>
@@ -179,41 +176,38 @@ function setupEventDelegation() {
   const container = document.getElementById('projects');
   
   container.addEventListener('click', async (e) => {
-    // ── VISIBILITY BADGE CLICK ───────────────────
-    const badge = e.target.closest('.visibility-badge');
-    if (badge) {
+    // ── VISIBILITY ICONS CLICK ───────────────────
+    const visIcon = e.target.closest('.vis-icon');
+    if (visIcon) {
       e.stopPropagation();
       
-      console.log('🔍 Visibility badge clicked');
-      console.log('  has clickable class:', badge.classList.contains('clickable'));
-      console.log('  projectId:', badge.dataset.id);
-      console.log('  currentVisibility:', badge.dataset.visibility);
-      
-      if (!badge.classList.contains('clickable')) {
-        console.log('  ❌ Not clickable - aborting');
+      if (!visIcon.classList.contains('clickable')) {
         return;
       }
       
-      const projectId = badge.dataset.id;
-      const currentVisibility = badge.dataset.visibility;
+      const projectId = visIcon.dataset.id;
+      const iconType = visIcon.dataset.type;
       const sessionId = getSessionId();
       
       if (!sessionId) {
-        alert('You must be logged in to change visibility.');
+        alert('You must be logged in to change settings.');
         return;
       }
       
-      const nextIndex = (visibilityOrder.indexOf(currentVisibility) + 1) % 4;
-      const newVisibility = visibilityOrder[nextIndex];
-      
-      console.log('  Changing to:', newVisibility);
-      
       try {
-        await setProjectVisibility(projectId, newVisibility, sessionId);
+        if (iconType === 'visibility') {
+          await toggleProjectVisibility(projectId, sessionId);
+        } else if (iconType === 'locked') {
+          await toggleProjectLocked(projectId, sessionId);
+        } else if (iconType === 'shared') {
+          // TODO: Apri dialogo condivisione (punto 4)
+          alert('Shared settings - coming soon!');
+          return;
+        }
         await loadProjects();
         render();
       } catch (err) {
-        console.error('  ❌ Error:', err);
+        console.error('Error:', err);
         alert('Error: ' + err.message);
       }
       return;
@@ -298,8 +292,7 @@ function setupEventDelegation() {
   });
 }
 
-// Visibility order (must be accessible in event handler)
-const visibilityOrder = ['public_rw', 'public_ro', 'locked', 'private'];
+// Visibility icons handler
 
 // ==========================================
 // EXPORT

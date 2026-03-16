@@ -170,6 +170,43 @@ body {
   padding-top: 0.75rem;
 }
 
+/* Icone visibilità sotto la maniglia */
+.project-visibility-icons {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.35rem;
+  margin-top: auto;
+  margin-bottom: 0.5rem;
+  padding: 0.35rem 0.15rem;
+  background: rgba(255, 255, 255, 0.03);
+  border-radius: 6px;
+}
+
+.vis-icon {
+  font-size: 0.85rem;
+  opacity: 0.6;
+  cursor: help;
+  transition: all 0.2s ease;
+  user-select: none;
+}
+
+.vis-icon.clickable {
+  cursor: pointer;
+  opacity: 0.8;
+}
+
+.vis-icon.clickable:hover {
+  opacity: 1;
+  transform: scale(1.15);
+}
+
+.vis-icon.shared-icon {
+  margin-top: 0.25rem;
+  padding-top: 0.25rem;
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
+}
+
 /* Lato destro - contenuto principale */
 .project-card-right {
   flex: 1;

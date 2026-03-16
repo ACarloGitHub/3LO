@@ -144,8 +144,8 @@ export async function deleteUser(userId, sessionId, options = 'make_public') {
 
 // === PROJECT VISIBILITY ===
 
-// Change project visibility
-export async function setProjectVisibility(projectId, visibility, sessionId) {
+// Toggle project visibility (is_visible)
+export async function toggleProjectVisibility(projectId, sessionId) {
   const db = await initDB();
   
   // Verify session
@@ -160,14 +160,33 @@ export async function setProjectVisibility(projectId, visibility, sessionId) {
     throw new Error('You are not the owner of this project');
   }
   
-  const validVisibilities = ['public_rw', 'public_ro', 'locked', 'private'];
-  if (!validVisibilities.includes(visibility)) {
-    throw new Error('Invalid visibility');
+  // Toggle is_visible
+  await db.execute(
+    'UPDATE projects SET is_visible = CASE WHEN is_visible = 1 THEN 0 ELSE 1 END WHERE id = ?',
+    [projectId]
+  );
+}
+
+// Toggle project locked status
+export async function toggleProjectLocked(projectId, sessionId) {
+  const db = await initDB();
+  
+  // Verify session
+  const session = await verifySession(sessionId);
+  if (!session) {
+    throw new Error('Unauthorized');
   }
   
+  // Verify ownership
+  const isOwner = await isProjectOwner(projectId, session.userId);
+  if (!isOwner) {
+    throw new Error('You are not the owner of this project');
+  }
+  
+  // Toggle is_locked
   await db.execute(
-    'UPDATE projects SET visibility = ? WHERE id = ?',
-    [visibility, projectId]
+    'UPDATE projects SET is_locked = CASE WHEN is_locked = 1 THEN 0 ELSE 1 END WHERE id = ?',
+    [projectId]
   );
 }
 
@@ -273,7 +292,7 @@ export async function canModifyProject(projectId, userId = null) {
   const db = await initDB();
   
   const result = await db.select(
-    'SELECT visibility, created_by FROM projects WHERE id = ?',
+    'SELECT is_visible, is_locked, created_by FROM projects WHERE id = ?',
     [projectId]
   );
   
@@ -283,18 +302,16 @@ export async function canModifyProject(projectId, userId = null) {
   
   const project = result[0];
   
-  switch (project.visibility) {
-    case 'public_rw':
-      return true; // Everyone can modify
-    case 'public_ro':
-    case 'locked':
-    case 'private':
-      // Only owner can modify
-      if (!userId) return false;
-      return isProjectOwner(projectId, userId);
-    default:
-      return false;
-  }
+  // If not logged in, can't modify
+  if (!userId) return false;
+  
+  // Check if user is owner or in shared list
+  const isOwner = await isProjectOwner(projectId, userId);
+  if (isOwner) return true;
+  
+  // Check shared permissions (TODO: implement shared permissions table)
+  // For now, only owners can modify
+  return false;
 }
 
 // Verify if user can view project
@@ -302,7 +319,7 @@ export async function canViewProject(projectId, userId = null) {
   const db = await initDB();
   
   const result = await db.select(
-    'SELECT visibility, created_by FROM projects WHERE id = ?',
+    'SELECT is_visible, is_locked, created_by FROM projects WHERE id = ?',
     [projectId]
   );
   
@@ -312,20 +329,19 @@ export async function canViewProject(projectId, userId = null) {
   
   const project = result[0];
   
-  switch (project.visibility) {
-    case 'public_rw':
-    case 'public_ro':
-      return true; // Everyone can view
-    case 'locked':
-      // Visible only name in list, but only owner sees content
-      return true; // List shows it, content filtered elsewhere
-    case 'private':
-      // Only owner can view
-      if (!userId) return false;
-      return isProjectOwner(projectId, userId);
-    default:
-      return false;
+  // If project is visible, everyone can see it
+  if (project.is_visible === 1) {
+    return true;
   }
+  
+  // If project is not visible, only owner/shared users can see it
+  if (!userId) return false;
+  
+  const isOwner = await isProjectOwner(projectId, userId);
+  if (isOwner) return true;
+  
+  // TODO: Check if user is in shared list
+  return false;
 }
 
 // Get visible projects for user
@@ -333,18 +349,18 @@ export async function getVisibleProjects(userId = null) {
   const db = await initDB();
   
   if (!userId) {
-    // Not logged in: only public projects
+    // Not logged in: only visible projects (is_visible = 1)
     return db.select(
-      "SELECT id, name, created, visibility FROM projects WHERE visibility IN ('public_rw', 'public_ro') ORDER BY sort_order ASC, created DESC"
+      "SELECT id, name, created, is_visible, is_locked, created_by FROM projects WHERE is_visible = 1 ORDER BY sort_order ASC, created DESC"
     );
   }
   
-  // Logged in: public projects + owned projects
+  // Logged in: visible projects + owned projects (even if not visible)
   return db.select(`
-    SELECT DISTINCT p.id, p.name, p.created, p.visibility, p.created_by
+    SELECT DISTINCT p.id, p.name, p.created, p.is_visible, p.is_locked, p.created_by
     FROM projects p
     LEFT JOIN project_owners po ON p.id = po.project_id
-    WHERE p.visibility IN ('public_rw', 'public_ro', 'locked')
+    WHERE p.is_visible = 1
        OR po.user_id = ?
        OR p.created_by = ?
     ORDER BY p.sort_order ASC, p.created DESC
