@@ -522,6 +522,16 @@ async function init() {
     // Carica dati dal database
     columns = projectData.board || [];
     cardsData = projectData.cards || {};
+    
+    // Se i dati dal DB sono vuoti ma esistono in localStorage, usa localStorage
+    if (columns.length === 0) {
+      const localBoard = JSON.parse(localStorage.getItem('3lo_board_' + currentProjectId) || '[]');
+      if (localBoard.length > 0) {
+        console.log('📂 [INIT] Using localStorage backup for board data');
+        columns = localBoard;
+        cardsData = JSON.parse(localStorage.getItem('3lo_cards_data_' + currentProjectId) || '{}');
+      }
+    }
   } else {
     // Fallback a localStorage se non trovato nel DB
     columns = JSON.parse(localStorage.getItem('3lo_board_' + currentProjectId) || '[]');
