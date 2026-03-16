@@ -3,6 +3,8 @@ import { getAllProjects, saveProject, deleteProject, loadProject, initDB, rename
 import { save, confirm } from '@tauri-apps/plugin-dialog';
 import { writeTextFile } from '@tauri-apps/plugin-fs';
 import logger from './logger.js';
+import { initAuth, isLoggedIn, getCurrentUser, getSessionId } from './auth_ui.js';
+import { claimProject, setProjectVisibility } from './auth.js';
 
 let projects = [];
 let currentSortMode = 'custom';
@@ -13,13 +15,12 @@ let currentSortMode = 'custom';
 
 async function init() {
   await initDB();
+  await initAuth();
   await loadProjects();
   render();
   
-  // Registra listener UNA SOLA VOLTA
   setupEventDelegation();
   
-  // Ascolta evento di aggiornamento progetti (da import)
   window.addEventListener('projects-updated', async () => {
     logger.info('home', 'Aggiornamento lista progetti...');
     await loadProjects();
@@ -56,14 +57,13 @@ function formatDate(ts) {
 }
 
 // ==========================================
-// RENDER - Aggiorna SOLO il DOM
+// RENDER
 // ==========================================
 
 async function render() {
   const container = document.getElementById('projects');
   container.innerHTML = '';
 
-  // Controlli ordinamento
   const sortDiv = document.createElement('div');
   sortDiv.className = 'home-sort-controls';
   sortDiv.style.cssText = 'grid-column: 1 / -1;';
@@ -77,7 +77,6 @@ async function render() {
   `;
   container.appendChild(sortDiv);
 
-  // Gestione cambio ordinamento
   const sortSelect = document.getElementById('home-sort-select');
   sortSelect.value = currentSortMode;
   sortSelect.addEventListener('change', (e) => {
@@ -85,14 +84,33 @@ async function render() {
     render();
   });
 
-  // Mostra progetti
   const sorted = sortProjects(projects);
+  const user = getCurrentUser();
+  const isLogged = isLoggedIn();
+  
+  const visibilityOrder = ['public_rw', 'public_ro', 'locked', 'private'];
+  const visibilityIcons = {
+    'public_rw': { icon: '🌐', title: 'Public - Everyone can edit' },
+    'public_ro': { icon: '👁️', title: 'Public (read only)' },
+    'locked': { icon: '🔒', title: 'Locked - Owner only' },
+    'private': { icon: '👤', title: 'Private - Owner only' }
+  };
   
   for (const proj of sorted) {
+    const visibility = proj.visibility || 'public_rw';
+    const visInfo = visibilityIcons[visibility];
+    const isOrphan = !proj.created_by;
+    const canClaim = isOrphan && isLogged;
+    const canChangeVisibility = isLogged && proj.created_by === user?.id;
+    
     const card = document.createElement('div');
     card.className = 'project-card';
     card.dataset.id = proj.id;
     card.innerHTML = `
+      <span class="visibility-badge ${canChangeVisibility ? 'clickable' : ''}" 
+            title="${visInfo.title}${canChangeVisibility ? ' (click to change)' : ''}" 
+            data-id="${proj.id}"
+            data-visibility="${visibility}">${visInfo.icon}</span>
       <div class="project-card-left">
         <div class="project-drag-handle" title="Drag to reorder">⋮⋮</div>
       </div>
@@ -100,6 +118,7 @@ async function render() {
         <div class="project-icon">🌙</div>
         <div class="project-title">${proj.name}</div>
         <div class="project-meta">${formatDate(proj.created)}</div>
+        ${canClaim ? '<button class="btn-claim" data-id="' + proj.id + '" title="Claim this project">🏷️ Claim</button>' : ''}
         <div class="project-actions">
           <button class="btn-open" data-id="${proj.id}">Open</button>
           <button class="btn-rename" data-id="${proj.id}">Ren</button>
@@ -111,14 +130,13 @@ async function render() {
     container.appendChild(card);
   }
   
-  // Inizializza Sortable per i progetti (solo in modalità custom)
   if (currentSortMode === 'custom' && typeof Sortable !== 'undefined') {
     initProjectSortable();
   }
 }
 
 // ==========================================
-// DRAG & DROP - Progetti
+// SORTABLE
 // ==========================================
 
 let projectSortable = null;
@@ -127,7 +145,6 @@ function initProjectSortable() {
   const container = document.getElementById('projects');
   if (!container) return;
   
-  // Distruggi Sortable esistente se c'è
   if (projectSortable) {
     projectSortable.destroy();
   }
@@ -141,15 +158,12 @@ function initProjectSortable() {
     forceFallback: true,
     fallbackClass: 'sortable-fallback-project',
     onEnd: async (evt) => {
-      // Aggiorna l'ordine dei progetti
       const newOrder = [];
       container.querySelectorAll('.project-card').forEach(el => {
         const id = el.dataset.id;
         const proj = projects.find(p => String(p.id) === String(id));
         if (proj) newOrder.push(proj);
       });
-      
-      // Salva il nuovo ordine
       projects = newOrder;
       await saveProjectOrder(newOrder);
       logger.info('home', 'Ordine progetti aggiornato');
@@ -158,32 +172,99 @@ function initProjectSortable() {
 }
 
 // ==========================================
-// EVENT DELEGATION - Registrato UNA VOLTA
+// EVENT DELEGATION
 // ==========================================
 
 function setupEventDelegation() {
   const container = document.getElementById('projects');
   
   container.addEventListener('click', async (e) => {
+    // ── VISIBILITY BADGE CLICK ───────────────────
+    const badge = e.target.closest('.visibility-badge');
+    if (badge) {
+      e.stopPropagation();
+      
+      console.log('🔍 Visibility badge clicked');
+      console.log('  has clickable class:', badge.classList.contains('clickable'));
+      console.log('  projectId:', badge.dataset.id);
+      console.log('  currentVisibility:', badge.dataset.visibility);
+      
+      if (!badge.classList.contains('clickable')) {
+        console.log('  ❌ Not clickable - aborting');
+        return;
+      }
+      
+      const projectId = badge.dataset.id;
+      const currentVisibility = badge.dataset.visibility;
+      const sessionId = getSessionId();
+      
+      if (!sessionId) {
+        alert('You must be logged in to change visibility.');
+        return;
+      }
+      
+      const nextIndex = (visibilityOrder.indexOf(currentVisibility) + 1) % 4;
+      const newVisibility = visibilityOrder[nextIndex];
+      
+      console.log('  Changing to:', newVisibility);
+      
+      try {
+        await setProjectVisibility(projectId, newVisibility, sessionId);
+        await loadProjects();
+        render();
+      } catch (err) {
+        console.error('  ❌ Error:', err);
+        alert('Error: ' + err.message);
+      }
+      return;
+    }
+    
+    // ── BUTTON CLICKS ───────────────────────────
     const btn = e.target.closest('button');
     if (!btn) return;
     
     const id = btn.dataset.id;
     const proj = projects.find(p => String(p.id) === String(id));
     
-    // ── OPEN ──────────────────────────────────────
+    // ── OPEN ────────────────────────────────────
     if (btn.classList.contains('btn-open')) {
       localStorage.setItem('3lo_current_project', id);
       window.location.href = './board.html';
       return;
     }
     
-    // Progetto necessario per le azioni seguenti
+    // ── CLAIM ───────────────────────────────────
+    if (btn.classList.contains('btn-claim')) {
+      const sessionId = getSessionId();
+      if (!sessionId) {
+        alert('You must be logged in to claim a project.');
+        return;
+      }
+      
+      const confirmed = await confirm('Claim this orphan project?\n\nIt will become private and you will be the owner.', {
+        title: 'Claim Project',
+        okLabel: 'Claim',
+        cancelLabel: 'Cancel'
+      });
+      
+      if (!confirmed) return;
+      
+      try {
+        await claimProject(id, sessionId);
+        await loadProjects();
+        render();
+        alert('Project claimed successfully!');
+      } catch (err) {
+        alert('Error: ' + err.message);
+      }
+      return;
+    }
+    
     if (!proj) return;
     
-    // ── RENAME ─────────────────────────────────────
+    // ── RENAME ───────────────────────────────────
     if (btn.classList.contains('btn-rename')) {
-      const newName = prompt('Nuovo nome:', proj.name);
+      const newName = prompt('New name:', proj.name);
       if (newName && newName.trim() !== '' && newName !== proj.name) {
         await renameProject(id, newName.trim());
         await loadProjects();
@@ -192,49 +273,41 @@ function setupEventDelegation() {
       return;
     }
     
-    // ── EXPORT ─────────────────────────────────────
+    // ── EXPORT ───────────────────────────────────
     if (btn.classList.contains('btn-export')) {
       await handleExport(proj);
       return;
     }
     
-    // ── DELETE ─────────────────────────────────────
+    // ── DELETE ───────────────────────────────────
     if (btn.classList.contains('btn-delete')) {
-      console.log('🔍 [DELETE] Click rilevato - id:', id, 'proj:', proj?.name);
-      
-      // Usa confirm asincrono di Tauri con await
-      const confirmed = await confirm(`Eliminare il progetto "${proj.name}"?`, {
-        title: 'Conferma eliminazione',
-        okLabel: 'Elimina',
-        cancelLabel: 'Annulla'
+      const confirmed = await confirm(`Delete project "${proj.name}"?`, {
+        title: 'Confirm deletion',
+        okLabel: 'Delete',
+        cancelLabel: 'Cancel'
       });
       
-      console.log('🔍 [DELETE] Conferma:', confirmed);
+      if (!confirmed) return;
       
-      if (!confirmed) {
-        console.log('🔍 [DELETE] Annullato - ESCO senza eliminare');
-        return;
-      }
-      
-      console.log('🔍 [DELETE] Confermato - chiamo deleteProject');
-      logger.info('home', `Eliminazione progetto: ${proj.name} (${id})`);
+      logger.info('home', `Deleting project: ${proj.name} (${id})`);
       await deleteProject(id);
       await loadProjects();
       render();
-      console.log('🔍 [DELETE] Completato');
       return;
     }
   });
 }
 
+// Visibility order (must be accessible in event handler)
+const visibilityOrder = ['public_rw', 'public_ro', 'locked', 'private'];
+
 // ==========================================
-// EXPORT - Funzione separata
+// EXPORT
 // ==========================================
 
 async function handleExport(proj) {
   const id = proj.id;
   
-  // Carica dati da localStorage
   const boardJson = localStorage.getItem('3lo_board_' + id);
   const cardsJson = localStorage.getItem('3lo_cards_data_' + id);
   
@@ -262,7 +335,7 @@ async function handleExport(proj) {
       "regole": [
         "board è array: [{id, title, cards: [...]}]",
         "cards dentro board ha solo {id, text}",
-        "cards (root) è oggetto metadata: {cardId: {created, modified, note}}",
+        "cards (root) metadata: {cardId: {created, modified, note}}",
         "id progetto univoco, senza spazi",
         "text supporta emoji e unicode"
       ]
@@ -281,27 +354,25 @@ async function handleExport(proj) {
     logger.info('home', `Export progetto: ${proj.name}`);
     
     const filePath = await save({
-      title: 'Salva progetto',
+      title: 'Save project',
       defaultPath: filename,
       filters: [{ name: 'JSON', extensions: ['json'] }]
     });
     
     if (!filePath) {
-      logger.info('home', 'Export annullato dall\'utente');
+      logger.info('home', 'Export cancelled');
       return;
     }
     
     await writeTextFile(filePath, jsonStr);
-    
-    // Salva il path per future esportazioni rapide
     await saveLastExportPath(proj.id, filePath);
     
-    logger.info('home', `Export completato: ${filePath}`);
-    alert('✅ Salvato in:\n' + filePath);
+    logger.info('home', `Export completed: ${filePath}`);
+    alert('✅ Saved to:\n' + filePath);
     
   } catch (err) {
-    logger.error('home', `Errore export: ${err.message}`);
-    alert('❌ Errore salvataggio:\n' + err.message);
+    logger.error('home', `Export error: ${err.message}`);
+    alert('❌ Error saving:\n' + err.message);
   }
 }
 
@@ -321,7 +392,7 @@ document.getElementById('new-project').addEventListener('click', async () => {
 });
 
 // ==========================================
-// AVVIA
+// START
 // ==========================================
 
 init();

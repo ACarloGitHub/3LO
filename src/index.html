@@ -24,8 +24,16 @@
     </div>
 
     <div class="app-footer">
-      <button id="template-ai-btn" class="footer-btn">AI Template</button>
-      <button id="help-btn" class="footer-btn" title="Instructions">Help</button>
+      <div class="footer-left">
+        <button id="account-btn" class="footer-btn footer-account" title="Account">
+          <span class="account-icon">👤</span>
+          <span class="account-text">Login</span>
+        </button>
+      </div>
+      <div class="footer-right">
+        <button id="template-ai-btn" class="footer-btn">AI Template</button>
+        <button id="help-btn" class="footer-btn" title="Instructions">Help</button>
+      </div>
     </div>
 
     <script src="https://cdn.jsdelivr.net/npm/sortablejs@latest/Sortable.min.js"></script>
@@ -226,3 +234,91 @@ INSTRUCTIONS:
     }
   });
 </script>
+
+<!-- Login Modal -->
+<div id="login-modal" class="modal" style="display: none;">
+  <div class="modal-content login-modal-content">
+    <span class="close-btn" id="close-login">&times;</span>
+    <h2>🔐 3LO Login</h2>
+    
+    <div class="login-tabs">
+      <button id="login-tab-btn" class="login-tab active">Login</button>
+      <button id="register-tab-btn" class="login-tab">Register</button>
+    </div>
+    
+    <form id="login-form" class="login-form">
+      <div class="form-group">
+        <label for="login-username">Username</label>
+        <input type="text" id="login-username" placeholder="Enter username" required />
+      </div>
+      <div class="form-group">
+        <label for="login-password">Password</label>
+        <input type="password" id="login-password" placeholder="Enter password" required />
+      </div>
+      <button type="submit" class="btn-login">Login</button>
+      <p id="login-error" class="error-msg" style="display: none;"></p>
+    </form>
+    
+    <form id="register-form" class="login-form" style="display: none;">
+      <div class="form-group">
+        <label for="register-username">Username</label>
+        <input type="text" id="register-username" placeholder="Choose username" required />
+      </div>
+      <div class="form-group">
+        <label for="register-password">Password</label>
+        <input type="password" id="register-password" placeholder="Choose password" required />
+      </div>
+      <div class="form-group">
+        <label for="register-confirm">Confirm Password</label>
+        <input type="password" id="register-confirm" placeholder="Confirm password" required />
+      </div>
+      <button type="submit" class="btn-login">Register</button>
+      <p id="register-error" class="error-msg" style="display: none;"></p>
+    </form>
+  </div>
+</div>
+
+<!-- Account Menu (dropdown) -->
+<div id="account-menu" class="account-dropdown" style="display: none;">
+  <div class="account-user-info">
+    <span class="account-username"></span>
+  </div>
+  <hr />
+  <button id="account-logout" class="dropdown-item">🚪 Logout</button>
+  <button id="account-delete" class="dropdown-item dropdown-danger">🗑️ Delete Account</button>
+</div>
+
+<style>
+/* Login Modal */
+.login-modal-content { max-width: 400px; }
+.login-tabs { display: flex; gap: 10px; margin-bottom: 20px; }
+.login-tab { flex: 1; padding: 10px; border: none; background: #e0e0e0; cursor: pointer; border-radius: 6px; font-size: 14px; }
+.login-tab.active { background: #6366f1; color: white; }
+.login-form { display: flex; flex-direction: column; gap: 15px; }
+.form-group { display: flex; flex-direction: column; gap: 5px; }
+.form-group label { font-size: 14px; font-weight: 500; }
+.form-group input { padding: 10px; border: 1px solid #ccc; border-radius: 6px; font-size: 14px; }
+.btn-login { padding: 12px; background: #6366f1; color: white; border: none; border-radius: 6px; cursor: pointer; font-size: 16px; }
+.btn-login:hover { background: #4f46e5; }
+.error-msg { color: #dc2626; font-size: 13px; text-align: center; }
+
+/* Account Dropdown */
+.account-dropdown {
+  position: fixed;
+  bottom: 60px;
+  left: 15px;
+  background: #1a1a2e;
+  border: 1px solid #6366f1;
+  border-radius: 8px;
+  padding: 10px;
+  min-width: 180px;
+  z-index: 1001;
+  box-shadow: 0 4px 20px rgba(0,0,0,0.5);
+}
+.account-user-info { padding: 8px 12px; color: white; font-weight: 500; }
+.account-dropdown hr { border: none; border-top: 1px solid #333; margin: 8px 0; }
+.dropdown-item { display: block; width: 100%; padding: 8px 12px; background: none; border: none; color: #a0a0a0; text-align: left; cursor: pointer; border-radius: 4px; }
+.dropdown-item:hover { background: rgba(99, 102, 241, 0.2); color: white; }
+.dropdown-danger:hover { background: rgba(220, 38, 38, 0.2); color: #fca5a5; }
+</style>
+<script type="module" src="./auth_ui.js"></script>

@@ -71,6 +71,54 @@ export async function initDB() {
       FOREIGN KEY (project_id) REFERENCES projects(id) ON DELETE CASCADE
     )
   `);
+
+  // === LOGIN SYSTEM ===
+  // Tabella utenti
+  await db.execute(`
+    CREATE TABLE IF NOT EXISTS users (
+      id TEXT PRIMARY KEY,
+      username TEXT UNIQUE NOT NULL,
+      password_hash TEXT NOT NULL,
+      created_at INTEGER NOT NULL,
+      last_login INTEGER
+    )
+  `);
+
+  // Tabella sessioni
+  await db.execute(`
+    CREATE TABLE IF NOT EXISTS sessions (
+      id TEXT PRIMARY KEY,
+      user_id TEXT NOT NULL,
+      created_at INTEGER NOT NULL,
+      expires_at INTEGER NOT NULL,
+      FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+    )
+  `);
+
+  // Tabella project_owners (many-to-many)
+  await db.execute(`
+    CREATE TABLE IF NOT EXISTS project_owners (
+      project_id TEXT NOT NULL,
+      user_id TEXT NOT NULL,
+      added_at INTEGER NOT NULL,
+      role TEXT DEFAULT 'owner',
+      PRIMARY KEY (project_id, user_id),
+      FOREIGN KEY (project_id) REFERENCES projects(id) ON DELETE CASCADE,
+      FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+    )
+  `);
+
+  // Migrazioni: aggiungi visibility e created_by a projects
+  try {
+    await db.execute(`ALTER TABLE projects ADD COLUMN visibility TEXT DEFAULT 'public_rw'`);
+  } catch (e) {
+    // Colonna già esistente
+  }
+  try {
+    await db.execute(`ALTER TABLE projects ADD COLUMN created_by TEXT REFERENCES users(id)`);
+  } catch (e) {
+    // Colonna già esistente
+  }
   
   // Migrazione: aggiungi json_path se non esiste
   try {
@@ -89,7 +137,9 @@ export async function getAllProjects() {
   return result.map(row => ({
     id: row.id,
     name: row.name,
-    created: row.created
+    created: row.created,
+    created_by: row.created_by || null,
+    visibility: row.visibility || 'public_rw'
   }));
 }
 
