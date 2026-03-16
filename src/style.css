@@ -1187,6 +1187,22 @@ body {
   opacity: 1;
 }
 
+.perm-icon {
+  font-size: 1.1rem;
+  opacity: 0.4;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  user-select: none;
+}
+
+.perm-icon.active {
+  opacity: 1;
+}
+
+.perm-icon:hover {
+  transform: scale(1.2);
+}
+
 .btn-remove-share {
   background: rgba(239, 68, 68, 0.2);
   border: 1px solid rgba(239, 68, 68, 0.3);

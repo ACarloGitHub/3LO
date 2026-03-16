@@ -246,14 +246,14 @@ INSTRUCTIONS:
       <button id="register-tab-btn" class="login-tab">Register</button>
     </div>
     
-    <form id="login-form" class="login-form">
+    <form id="login-form" class="login-form" autocomplete="off">
       <div class="form-group">
         <label for="login-username">Username</label>
-        <input type="text" id="login-username" placeholder="Enter username" required />
+        <input type="text" id="login-username" placeholder="Enter username" required autocomplete="off" />
       </div>
       <div class="form-group">
         <label for="login-password">Password</label>
-        <input type="password" id="login-password" placeholder="Enter password" required />
+        <input type="password" id="login-password" placeholder="Enter password" required autocomplete="off" />
       </div>
       <button type="submit" class="btn-login">Login</button>
       <p id="login-error" class="error-msg" style="display: none;"></p>

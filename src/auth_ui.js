@@ -73,11 +73,13 @@ function setupEventListeners() {
   if (closeLogin && loginModal) {
     closeLogin.addEventListener('click', () => {
       loginModal.style.display = 'none';
+      clearLoginForm();
     });
     
     window.addEventListener('click', (e) => {
       if (e.target === loginModal) {
         loginModal.style.display = 'none';
+        clearLoginForm();
       }
     });
   }
@@ -140,6 +142,28 @@ function setupEventListeners() {
 // HANDLERS
 // ==========================================
 
+function clearLoginForm() {
+  // Clear login form
+  const loginUsername = document.getElementById('login-username');
+  const loginPassword = document.getElementById('login-password');
+  const loginError = document.getElementById('login-error');
+  
+  if (loginUsername) loginUsername.value = '';
+  if (loginPassword) loginPassword.value = '';
+  if (loginError) loginError.style.display = 'none';
+  
+  // Clear register form
+  const registerUsername = document.getElementById('register-username');
+  const registerPassword = document.getElementById('register-password');
+  const registerConfirm = document.getElementById('register-confirm');
+  const registerError = document.getElementById('register-error');
+  
+  if (registerUsername) registerUsername.value = '';
+  if (registerPassword) registerPassword.value = '';
+  if (registerConfirm) registerConfirm.value = '';
+  if (registerError) registerError.style.display = 'none';
+}
+
 async function handleAccountClick() {
   if (currentUser) {
     // Toggle dropdown
@@ -153,6 +177,7 @@ async function handleAccountClick() {
     const loginModal = document.getElementById('login-modal');
     if (loginModal) {
       loginModal.style.display = 'block';
+      clearLoginForm();
     }
   }
 }
@@ -180,6 +205,7 @@ async function handleLogin(e) {
     
     // Close modal
     document.getElementById('login-modal').style.display = 'none';
+    clearLoginForm();
     
     // Update UI
     updateUIForLoggedIn();
@@ -230,6 +256,7 @@ async function handleRegister(e) {
     localStorage.setItem('3lo_session', currentSessionId);
     
     document.getElementById('login-modal').style.display = 'none';
+    clearLoginForm();
     updateUIForLoggedIn();
     window.dispatchEvent(new Event('projects-updated'));
     

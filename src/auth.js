@@ -314,7 +314,62 @@ export async function getVisibleProjects(userId = null) {
 
 // === PROJECT SHARING ===
 
-// Get all shares for a project
+// Get all registered users (for share dialog)
+export async function getAllUsers(sessionId) {
+  const db = await initDB();
+  
+  const session = await verifySession(sessionId);
+  if (!session) {
+    throw new Error('Unauthorized');
+  }
+  
+  const result = await db.select(
+    'SELECT id, username FROM users WHERE id != ? ORDER BY username ASC',
+    [session.userId]
+  );
+  
+  return result;
+}
+
+// Get all users with their share status for a project
+export async function getUsersWithShareStatus(projectId, sessionId) {
+  const db = await initDB();
+  
+  const session = await verifySession(sessionId);
+  if (!session) {
+    throw new Error('Unauthorized');
+  }
+  
+  // Get all users except current user
+  const users = await db.select(
+    'SELECT id, username FROM users WHERE id != ? ORDER BY username ASC',
+    [session.userId]
+  );
+  
+  // Get existing shares for this project
+  const shares = await db.select(
+    'SELECT user_id, can_view, can_open, can_edit FROM project_shares WHERE project_id = ?',
+    [projectId]
+  );
+  
+  const shareMap = {};
+  for (const share of shares) {
+    shareMap[share.user_id] = {
+      canView: share.can_view === 1,
+      canOpen: share.can_open === 1,
+      canEdit: share.can_edit === 1
+    };
+  }
+  
+  // Combine users with their share status
+  return users.map(user => ({
+    userId: user.id,
+    username: user.username,
+    canView: shareMap[user.id]?.canView || false,
+    canOpen: shareMap[user.id]?.canOpen || false,
+    canEdit: shareMap[user.id]?.canEdit || false
+  }));
+}
 export async function getProjectShares(projectId) {
   const db = await initDB();
   

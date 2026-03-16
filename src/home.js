@@ -8,10 +8,8 @@ import {
   claimProject, 
   toggleProjectVisibility, 
   toggleProjectLocked,
-  getProjectShares,
-  setProjectShare,
-  removeProjectShare,
-  getSharePermissions
+  getUsersWithShareStatus,
+  setProjectShare
 } from './auth.js';
 
 let projects = [];
@@ -41,7 +39,19 @@ async function init() {
 // ==========================================
 
 async function loadProjects() {
-  projects = await getAllProjects();
+  const allProjects = await getAllProjects();
+  const user = getCurrentUser();
+  const isLogged = isLoggedIn();
+  
+  // Filter projects based on visibility and ownership
+  projects = allProjects.filter(proj => {
+    // If project is visible, show it
+    if (proj.is_visible) return true;
+    
+    // If not visible, only show to owner
+    if (!isLogged) return false;
+    return proj.created_by === user?.id;
+  });
 }
 
 function sortProjects(list) {
@@ -392,8 +402,8 @@ async function openShareDialog(projectId) {
     return;
   }
   
-  // Get current shares
-  const shares = await getProjectShares(projectId);
+  // Get all users with their share status
+  const users = await getUsersWithShareStatus(projectId, sessionId);
   
   // Create modal HTML
   const modal = document.createElement('div');
@@ -406,27 +416,17 @@ async function openShareDialog(projectId) {
         <button class="share-modal-close">×</button>
       </div>
       <div class="share-modal-body">
-        <div class="share-add-user">
-          <input type="text" id="share-username" placeholder="Username to share with">
-          <div class="share-permissions">
-            <label><input type="checkbox" id="perm-view" checked> Can View</label>
-            <label><input type="checkbox" id="perm-open"> Can Open</label>
-            <label><input type="checkbox" id="perm-edit"> Can Edit</label>
-          </div>
-          <button id="btn-add-share">Add User</button>
-        </div>
         <div class="share-list">
-          <h4>Shared With:</h4>
+          <h4>All Users - Click icons to toggle permissions:</h4>
           <div id="share-users-list">
-            ${shares.length === 0 ? '<p class="share-empty">No users shared yet</p>' : shares.map(s => `
-              <div class="share-user-row" data-userid="${s.userId}">
-                <span class="share-username">${s.username}</span>
+            ${users.length === 0 ? '<p class="share-empty">No other users registered</p>' : users.map(u => `
+              <div class="share-user-row" data-username="${u.username}">
+                <span class="share-username">${u.username}</span>
                 <div class="share-user-perms">
-                  <span class="perm-badge ${s.canView ? 'active' : ''}" title="Can View">👁️</span>
-                  <span class="perm-badge ${s.canOpen ? 'active' : ''}" title="Can Open">🔓</span>
-                  <span class="perm-badge ${s.canEdit ? 'active' : ''}" title="Can Edit">✏️</span>
+                  <span class="perm-icon ${u.canView ? 'active' : ''}" data-perm="view" title="Can View">${u.canView ? '🐵' : '🙈'}</span>
+                  <span class="perm-icon ${u.canOpen ? 'active' : ''}" data-perm="open" title="Can Open">${u.canOpen ? '🔓' : '🔒'}</span>
+                  <span class="perm-icon ${u.canEdit ? 'active' : ''}" data-perm="edit" title="Can Edit">${u.canEdit ? '✏️' : '🚫'}</span>
                 </div>
-                <button class="btn-remove-share" data-userid="${s.userId}">Remove</button>
               </div>
             `).join('')}
           </div>
@@ -443,36 +443,60 @@ async function openShareDialog(projectId) {
     if (e.target === modal) closeShareDialog();
   });
   
-  modal.querySelector('#btn-add-share').addEventListener('click', async () => {
-    const username = document.getElementById('share-username').value.trim();
-    if (!username) {
-      alert('Please enter a username');
-      return;
-    }
-    
-    const permissions = {
-      canView: document.getElementById('perm-view').checked,
-      canOpen: document.getElementById('perm-open').checked,
-      canEdit: document.getElementById('perm-edit').checked
-    };
-    
-    try {
-      await setProjectShare(projectId, username, permissions, sessionId);
-      closeShareDialog();
-      openShareDialog(projectId); // Refresh
-    } catch (err) {
-      alert('Error: ' + err.message);
-    }
-  });
-  
-  // Remove share buttons
-  modal.querySelectorAll('.btn-remove-share').forEach(btn => {
-    btn.addEventListener('click', async (e) => {
-      const userId = e.target.dataset.userid;
+  // Permission toggle icons
+  modal.querySelectorAll('.perm-icon').forEach(icon => {
+    icon.addEventListener('click', async (e) => {
+      const row = e.target.closest('.share-user-row');
+      const username = row.dataset.username;
+      const permType = e.target.dataset.perm;
+      
+      // Get current permissions from icons
+      const viewIcon = row.querySelector('[data-perm="view"]');
+      const openIcon = row.querySelector('[data-perm="open"]');
+      const editIcon = row.querySelector('[data-perm="edit"]');
+      
+      const permissions = {
+        canView: viewIcon.classList.contains('active'),
+        canOpen: openIcon.classList.contains('active'),
+        canEdit: editIcon.classList.contains('active')
+      };
+      
+      // Toggle the clicked permission
+      if (permType === 'view') {
+        permissions.canView = !permissions.canView;
+        // If can't view, can't open or edit
+        if (!permissions.canView) {
+          permissions.canOpen = false;
+          permissions.canEdit = false;
+        }
+      } else if (permType === 'open') {
+        permissions.canOpen = !permissions.canOpen;
+        // If can open, must be able to view
+        if (permissions.canOpen) {
+          permissions.canView = true;
+        }
+        // If can't open, can't edit
+        if (!permissions.canOpen) {
+          permissions.canEdit = false;
+        }
+      } else if (permType === 'edit') {
+        permissions.canEdit = !permissions.canEdit;
+        // If can edit, must be able to view and open
+        if (permissions.canEdit) {
+          permissions.canView = true;
+          permissions.canOpen = true;
+        }
+      }
+      
       try {
-        await removeProjectShare(projectId, userId, sessionId);
-        closeShareDialog();
-        openShareDialog(projectId); // Refresh
+        await setProjectShare(projectId, username, permissions, sessionId);
+        // Update UI
+        viewIcon.classList.toggle('active', permissions.canView);
+        viewIcon.textContent = permissions.canView ? '🐵' : '🙈';
+        openIcon.classList.toggle('active', permissions.canOpen);
+        openIcon.textContent = permissions.canOpen ? '🔓' : '🔒';
+        editIcon.classList.toggle('active', permissions.canEdit);
+        editIcon.textContent = permissions.canEdit ? '✏️' : '🚫';
       } catch (err) {
         alert('Error: ' + err.message);
       }
