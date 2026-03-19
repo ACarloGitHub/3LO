@@ -1,5 +1,5 @@
 // Login System UI for 3LO
-import { registerUser, loginUser, logoutUser, verifySession, deleteUser } from './auth.js';
+import { registerUser, loginUser, logoutUser, verifySession, deleteUser, updateUserColor, getUserColor } from './auth.js';
 
 let currentSessionId = null;
 let currentUser = null;
@@ -104,11 +104,35 @@ function setupEventListeners() {
   // Register form
   if (registerForm) {
     registerForm.addEventListener('submit', handleRegister);
+    
+    // Color picker setup
+    const colorOptions = registerForm.querySelectorAll('.color-option');
+    const colorInput = registerForm.querySelector('#register-color');
+    const colorPreview = registerForm.querySelector('.color-preview');
+    
+    colorOptions.forEach(option => {
+      option.addEventListener('click', () => {
+        // Remove selected class from all
+        colorOptions.forEach(opt => opt.classList.remove('selected'));
+        // Add to clicked
+        option.classList.add('selected');
+        // Update input and preview
+        const color = option.dataset.color;
+        if (colorInput) colorInput.value = color;
+        if (colorPreview) colorPreview.style.background = color;
+      });
+    });
+    
+    // Select first color by default
+    if (colorOptions.length > 0) {
+      colorOptions[0].classList.add('selected');
+    }
   }
   
   // Account dropdown
   const accountLogout = document.getElementById('account-logout');
   const accountDelete = document.getElementById('account-delete');
+  const accountColor = document.getElementById('account-color');
   
   if (accountLogout) {
     accountLogout.addEventListener('click', handleLogout);
@@ -116,6 +140,60 @@ function setupEventListeners() {
   
   if (accountDelete) {
     accountDelete.addEventListener('click', handleDeleteAccount);
+  }
+  
+  if (accountColor) {
+    accountColor.addEventListener('click', openColorModal);
+  }
+  
+  // Color modal
+  const colorModal = document.getElementById('color-modal');
+  const closeColor = document.getElementById('close-color');
+  const saveColor = document.getElementById('save-color');
+  const settingsColorPalette = document.getElementById('settings-color-palette');
+  const settingsColorInput = document.getElementById('settings-color');
+  const settingsColorPreview = document.getElementById('settings-color-preview');
+  
+  if (closeColor) {
+    closeColor.addEventListener('click', () => {
+      colorModal.style.display = 'none';
+    });
+  }
+  
+  if (colorModal) {
+    window.addEventListener('click', (e) => {
+      if (e.target === colorModal) {
+        colorModal.style.display = 'none';
+      }
+    });
+  }
+  
+  if (settingsColorPalette) {
+    const colorOptions = settingsColorPalette.querySelectorAll('.color-option');
+    colorOptions.forEach(option => {
+      option.addEventListener('click', () => {
+        colorOptions.forEach(opt => opt.classList.remove('selected'));
+        option.classList.add('selected');
+        const color = option.dataset.color;
+        if (settingsColorInput) settingsColorInput.value = color;
+        if (settingsColorPreview) settingsColorPreview.style.background = color;
+      });
+    });
+  }
+  
+  if (settingsColorInput) {
+    settingsColorInput.addEventListener('input', (e) => {
+      if (settingsColorPreview) settingsColorPreview.style.background = e.target.value;
+      // Remove selected from palette
+      const colorOptions = settingsColorPalette?.querySelectorAll('.color-option');
+      if (colorOptions) {
+        colorOptions.forEach(opt => opt.classList.remove('selected'));
+      }
+    });
+  }
+  
+  if (saveColor) {
+    saveColor.addEventListener('click', handleSaveColor);
   }
   
   // Close dropdown on click outside
@@ -190,6 +268,10 @@ async function handleLogin(e) {
     currentSessionId = result.sessionId;
     currentUser = result.user;
     
+    // Load user color
+    const userColor = await getUserColor(currentUser.id);
+    currentUser.color = userColor;
+    
     // Save session
     localStorage.setItem('3lo_session', currentSessionId);
     
@@ -215,6 +297,8 @@ async function handleRegister(e) {
   const username = document.getElementById('register-username').value.trim();
   const password = document.getElementById('register-password').value;
   const confirm = document.getElementById('register-confirm').value;
+  const colorInput = document.getElementById('register-color');
+  const color = colorInput ? colorInput.value : '#4CAF50';
   const errorEl = document.getElementById('register-error');
   
   if (!username || !password) {
@@ -236,7 +320,7 @@ async function handleRegister(e) {
   }
   
   try {
-    await registerUser(username, password);
+    await registerUser(username, password, color);
     
     // Auto-login after registration
     const result = await loginUser(username, password);
@@ -335,6 +419,10 @@ function updateUIForLoggedIn() {
   
   if (accountUsername) {
     accountUsername.textContent = currentUser ? currentUser.username : 'User';
+    // Apply user color as background
+    const userColor = currentUser?.color || '#4CAF50';
+    accountUsername.style.background = userColor;
+    accountUsername.classList.add('user-color-badge');
   }
 }
 
@@ -350,6 +438,78 @@ function updateUIForLoggedOut() {
   
   if (accountText) {
     accountText.textContent = 'Login';
+  }
+}
+
+// ==========================================
+// COLOR MODAL
+// ==========================================
+
+function openColorModal() {
+  const colorModal = document.getElementById('color-modal');
+  const settingsColorInput = document.getElementById('settings-color');
+  const settingsColorPreview = document.getElementById('settings-color-preview');
+  const settingsColorPalette = document.getElementById('settings-color-palette');
+  
+  if (!colorModal) return;
+  
+  // Set current color
+  const currentColor = currentUser?.color || '#4CAF50';
+  if (settingsColorInput) settingsColorInput.value = currentColor;
+  if (settingsColorPreview) settingsColorPreview.style.background = currentColor;
+  
+  // Select matching palette color if exists
+  if (settingsColorPalette) {
+    const colorOptions = settingsColorPalette.querySelectorAll('.color-option');
+    colorOptions.forEach(opt => {
+      opt.classList.remove('selected');
+      if (opt.dataset.color === currentColor) {
+        opt.classList.add('selected');
+      }
+    });
+  }
+  
+  // Close dropdown
+  const dropdown = document.getElementById('account-menu');
+  if (dropdown) dropdown.style.display = 'none';
+  
+  // Show modal
+  colorModal.style.display = 'block';
+}
+
+async function handleSaveColor() {
+  const settingsColorInput = document.getElementById('settings-color');
+  const colorError = document.getElementById('color-error');
+  const colorModal = document.getElementById('color-modal');
+  
+  if (!currentUser || !currentUser.id) {
+    if (colorError) {
+      colorError.textContent = 'Not logged in';
+      colorError.style.display = 'block';
+    }
+    return;
+  }
+  
+  const newColor = settingsColorInput ? settingsColorInput.value : '#4CAF50';
+  
+  try {
+    await updateUserColor(currentUser.id, newColor);
+    currentUser.color = newColor;
+    
+    // Update UI
+    const accountUsername = document.querySelector('.account-username');
+    if (accountUsername) {
+      accountUsername.style.background = newColor;
+    }
+    
+    // Close modal
+    if (colorModal) colorModal.style.display = 'none';
+    
+  } catch (err) {
+    if (colorError) {
+      colorError.textContent = err.message;
+      colorError.style.display = 'block';
+    }
   }
 }
 

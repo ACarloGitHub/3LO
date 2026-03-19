@@ -188,6 +188,54 @@ export async function initDB() {
       FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
     )
   `);
+
+  // === COLORE UTENTE ===
+  // Aggiungi colonna color alla tabella users
+  try {
+    await db.execute(`ALTER TABLE users ADD COLUMN color TEXT DEFAULT '#4CAF50'`);
+  } catch (e) {
+    // Colonna già esistente
+  }
+
+  // === COLORI PERSONALIZZATI — OVERRIDE SYSTEM ===
+  // Tabella per colori specifici di colonne (liste)
+  await db.execute(`
+    CREATE TABLE IF NOT EXISTS column_colors (
+      project_id TEXT NOT NULL,
+      column_id TEXT NOT NULL,
+      bg_color TEXT,
+      text_color TEXT,
+      gradient TEXT,
+      updated_at INTEGER DEFAULT 0,
+      PRIMARY KEY (project_id, column_id),
+      FOREIGN KEY (project_id) REFERENCES projects(id) ON DELETE CASCADE
+    )
+  `);
+
+  // Tabella per colori specifici di schede
+  await db.execute(`
+    CREATE TABLE IF NOT EXISTS card_colors (
+      project_id TEXT NOT NULL,
+      card_id TEXT NOT NULL,
+      bg_color TEXT,
+      text_color TEXT,
+      updated_at INTEGER DEFAULT 0,
+      PRIMARY KEY (project_id, card_id),
+      FOREIGN KEY (project_id) REFERENCES projects(id) ON DELETE CASCADE
+    )
+  `);
+
+  // Tabella per colori specifici di progetti (override settings.json)
+  await db.execute(`
+    CREATE TABLE IF NOT EXISTS project_colors (
+      project_id TEXT PRIMARY KEY,
+      bg_color TEXT,
+      text_color TEXT,
+      gradient TEXT,
+      updated_at INTEGER DEFAULT 0,
+      FOREIGN KEY (project_id) REFERENCES projects(id) ON DELETE CASCADE
+    )
+  `);
   
   return db;
 }
@@ -257,6 +305,8 @@ export async function loadProject(projectId) {
 // Elimina progetto
 export async function deleteProject(projectId) {
   const db = await initDB();
+  // Elimina prima i colori associati (per evitare errori FK)
+  await deleteAllProjectColors(projectId);
   await db.execute('DELETE FROM projects WHERE id = ?', [projectId]);
 }
 
@@ -379,6 +429,169 @@ export async function saveProjectOrder(orderedProjects) {
       [i, orderedProjects[i].id]
     );
   }
+}
+
+// === COLORI PERSONALIZZATI — GET/SET FUNCTIONS ===
+
+// --- COLORI COLONNE (LISTE) ---
+export async function getColumnColors(projectId, columnId) {
+  const db = await initDB();
+  const result = await db.select(
+    'SELECT bg_color, text_color, gradient FROM column_colors WHERE project_id = ? AND column_id = ?',
+    [projectId, columnId]
+  );
+  if (result.length === 0) return null;
+  return {
+    bg: result[0].bg_color,
+    text: result[0].text_color,
+    gradient: result[0].gradient
+  };
+}
+
+export async function setColumnColors(projectId, columnId, colors) {
+  const db = await initDB();
+  const now = Date.now();
+  await db.execute(
+    `INSERT INTO column_colors (project_id, column_id, bg_color, text_color, gradient, updated_at)
+     VALUES (?, ?, ?, ?, ?, ?)
+     ON CONFLICT(project_id, column_id) DO UPDATE SET
+       bg_color = excluded.bg_color,
+       text_color = excluded.text_color,
+       gradient = excluded.gradient,
+       updated_at = excluded.updated_at`,
+    [projectId, columnId, colors.bg || null, colors.text || null, colors.gradient || null, now]
+  );
+}
+
+export async function deleteColumnColors(projectId, columnId) {
+  const db = await initDB();
+  await db.execute(
+    'DELETE FROM column_colors WHERE project_id = ? AND column_id = ?',
+    [projectId, columnId]
+  );
+}
+
+// --- COLORI SCHEDE ---
+export async function getCardColors(projectId, cardId) {
+  const db = await initDB();
+  const result = await db.select(
+    'SELECT bg_color, text_color FROM card_colors WHERE project_id = ? AND card_id = ?',
+    [projectId, cardId]
+  );
+  if (result.length === 0) return null;
+  return {
+    bg: result[0].bg_color,
+    text: result[0].text_color
+  };
+}
+
+export async function setCardColors(projectId, cardId, colors) {
+  const db = await initDB();
+  const now = Date.now();
+  await db.execute(
+    `INSERT INTO card_colors (project_id, card_id, bg_color, text_color, updated_at)
+     VALUES (?, ?, ?, ?, ?)
+     ON CONFLICT(project_id, card_id) DO UPDATE SET
+       bg_color = excluded.bg_color,
+       text_color = excluded.text_color,
+       updated_at = excluded.updated_at`,
+    [projectId, cardId, colors.bg || null, colors.text || null, now]
+  );
+}
+
+export async function deleteCardColors(projectId, cardId) {
+  const db = await initDB();
+  await db.execute(
+    'DELETE FROM card_colors WHERE project_id = ? AND card_id = ?',
+    [projectId, cardId]
+  );
+}
+
+// --- COLORI PROGETTI (OVERRIDE) ---
+export async function getProjectColorsOverride(projectId) {
+  const db = await initDB();
+  const result = await db.select(
+    'SELECT bg_color, text_color, gradient FROM project_colors WHERE project_id = ?',
+    [projectId]
+  );
+  if (result.length === 0) return null;
+  return {
+    bg: result[0].bg_color,
+    text: result[0].text_color,
+    gradient: result[0].gradient
+  };
+}
+
+export async function setProjectColorsOverride(projectId, colors) {
+  const db = await initDB();
+  const now = Date.now();
+  await db.execute(
+    `INSERT INTO project_colors (project_id, bg_color, text_color, gradient, updated_at)
+     VALUES (?, ?, ?, ?, ?)
+     ON CONFLICT(project_id) DO UPDATE SET
+       bg_color = excluded.bg_color,
+       text_color = excluded.text_color,
+       gradient = excluded.gradient,
+       updated_at = excluded.updated_at`,
+    [projectId, colors.bg || null, colors.text || null, colors.gradient || null, now]
+  );
+}
+
+export async function deleteProjectColorsOverride(projectId) {
+  const db = await initDB();
+  await db.execute(
+    'DELETE FROM project_colors WHERE project_id = ?',
+    [projectId]
+  );
+}
+
+// --- CARICA TUTTI I COLORI DI UN PROGETTO (per inizializzazione UI) ---
+export async function loadAllProjectColors(projectId) {
+  const db = await initDB();
+  
+  // Colori progetto
+  const projectColors = await getProjectColorsOverride(projectId);
+  
+  // Colori colonne
+  const columnColorsResult = await db.select(
+    'SELECT column_id, bg_color, text_color, gradient FROM column_colors WHERE project_id = ?',
+    [projectId]
+  );
+  const columnColors = {};
+  for (const row of columnColorsResult) {
+    columnColors[row.column_id] = {
+      bg: row.bg_color,
+      text: row.text_color,
+      gradient: row.gradient
+    };
+  }
+  
+  // Colori schede
+  const cardColorsResult = await db.select(
+    'SELECT card_id, bg_color, text_color FROM card_colors WHERE project_id = ?',
+    [projectId]
+  );
+  const cardColors = {};
+  for (const row of cardColorsResult) {
+    cardColors[row.card_id] = {
+      bg: row.bg_color,
+      text: row.text_color
+    };
+  }
+  
+  return {
+    project: projectColors,
+    columns: columnColors,
+    cards: cardColors
+  };
+}
+
+// --- ELIMINA TUTTI I COLORI QUANDO SI ELIMINA UN PROGETTO ---
+export async function deleteAllProjectColors(projectId) {
+  const db = await initDB();
+  await db.execute('DELETE FROM project_colors WHERE project_id = ?', [projectId]);
+  await db.execute('DELETE FROM column_colors WHERE project_id = ?', [projectId]);
+  await db.execute('DELETE FROM card_colors WHERE project_id = ?', [projectId]);
 }
 
 // Chiudi connessione

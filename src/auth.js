@@ -18,7 +18,7 @@ async function hashPassword(password) {
 // === UTENTI ===
 
 // Register new user
-export async function registerUser(username, password) {
+export async function registerUser(username, password, color = '#4CAF50') {
   const db = await initDB();
   
   // Verifica se username esiste già
@@ -32,11 +32,24 @@ export async function registerUser(username, password) {
   const now = Date.now();
   
   await db.execute(
-    'INSERT INTO users (id, username, password_hash, created_at) VALUES (?, ?, ?, ?)',
-    [userId, username, passwordHash, now]
+    'INSERT INTO users (id, username, password_hash, created_at, color) VALUES (?, ?, ?, ?, ?)',
+    [userId, username, passwordHash, now, color]
   );
   
-  return { id: userId, username, createdAt: now };
+  return { id: userId, username, color, createdAt: now };
+}
+
+// Update user color
+export async function updateUserColor(userId, color) {
+  const db = await initDB();
+  await db.execute('UPDATE users SET color = ? WHERE id = ?', [color, userId]);
+}
+
+// Get user color
+export async function getUserColor(userId) {
+  const db = await initDB();
+  const result = await db.select('SELECT color FROM users WHERE id = ?', [userId]);
+  return result.length > 0 ? result[0].color : '#4CAF50';
 }
 
 // Login user

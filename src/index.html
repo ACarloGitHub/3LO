@@ -126,6 +126,27 @@
       <li><strong>New Project</strong> → Create empty project</li>
       <li><strong>🗑️ Icon</strong> → Delete card</li>
     </ul>
+
+    <h3>🔐 Account & Login</h3>
+    <ul>
+      <li><strong>Login Button</strong> → Opens login/register modal. Create an account to claim and manage projects</li>
+      <li><strong>🎨 Change Color</strong> → In the account dropdown, change your user color that appears on your projects</li>
+      <li><strong>🚪 Logout</strong> → Log out of your account. Happens automatically when you close the app</li>
+    </ul>
+
+    <h3>🏷️ Project Visibility & Ownership</h3>
+    <ul>
+      <li><strong>🐵/🙈 Visible Toggle</strong> → 🐵 Project is visible to everyone / 🙈 Project is hidden (only owner sees it)</li>
+      <li><strong>🔓/🔒 Locked Toggle</strong> → 🔓 Anyone can open / 🔒 Only owner can open (others see it grayed out)</li>
+      <li><strong>👥 Shared</strong> → Open sharing dialog to give view/open/edit permissions to other users</li>
+      <li><strong>🏷️ Claim</strong> → Take ownership of an orphaned project (projects without an owner)</li>
+      <li><strong>↩️ Release</strong> → Give up ownership and make the project public again (only visible to owner)</li>
+    </ul>
+
+    <h3>🔄 Refresh & Update</h3>
+    <ul>
+      <li><strong>Refresh Button</strong> → Syncs the current project with its JSON file. Updates the project if the JSON changed, or updates the JSON if the project changed</li>
+    </ul>
   </div>
 </div>
 
@@ -272,6 +293,23 @@ INSTRUCTIONS:
         <label for="register-confirm">Confirm Password</label>
         <input type="password" id="register-confirm" placeholder="Confirm password" required />
       </div>
+      <div class="form-group">
+        <label>Choose Your Color</label>
+        <div class="color-picker-container">
+          <div class="color-palette">
+            <span class="color-option" data-color="#4CAF50" style="background: #4CAF50;" title="Green"></span>
+            <span class="color-option" data-color="#2196F3" style="background: #2196F3;" title="Blue"></span>
+            <span class="color-option" data-color="#FF9800" style="background: #FF9800;" title="Orange"></span>
+            <span class="color-option" data-color="#9C27B0" style="background: #9C27B0;" title="Purple"></span>
+            <span class="color-option" data-color="#F44336" style="background: #F44336;" title="Red"></span>
+            <span class="color-option" data-color="#00BCD4" style="background: #00BCD4;" title="Cyan"></span>
+            <span class="color-option" data-color="#FFEB3B" style="background: #FFEB3B;" title="Yellow"></span>
+            <span class="color-option" data-color="#795548" style="background: #795548;" title="Brown"></span>
+          </div>
+          <input type="color" id="register-color" value="#4CAF50" style="display: none;" />
+          <div class="color-preview" style="width: 40px; height: 40px; background: #4CAF50; border-radius: 8px; margin-top: 10px; border: 2px solid #ccc;"></div>
+        </div>
+      </div>
       <button type="submit" class="btn-login">Register</button>
       <p id="register-error" class="error-msg" style="display: none;"></p>
     </form>
@@ -284,8 +322,37 @@ INSTRUCTIONS:
     <span class="account-username"></span>
   </div>
   <hr />
+  <button id="account-color" class="dropdown-item">🎨 Change Color</button>
   <button id="account-logout" class="dropdown-item">🚪 Logout</button>
   <button id="account-delete" class="dropdown-item dropdown-danger">🗑️ Delete Account</button>
+</div>
+
+<!-- Color Change Modal -->
+<div id="color-modal" class="modal" style="display: none;">
+  <div class="modal-content login-modal-content">
+    <div class="modal-header">
+      <h3>Change Your Color</h3>
+      <button id="close-color" class="modal-close">&times;</button>
+    </div>
+    <div class="color-picker-container" style="padding: 20px;">
+      <label>Choose Your Color</label>
+      <div class="color-palette" id="settings-color-palette">
+        <span class="color-option" data-color="#4CAF50" style="background: #4CAF50;" title="Green"></span>
+        <span class="color-option" data-color="#2196F3" style="background: #2196F3;" title="Blue"></span>
+        <span class="color-option" data-color="#FF9800" style="background: #FF9800;" title="Orange"></span>
+        <span class="color-option" data-color="#9C27B0" style="background: #9C27B0;" title="Purple"></span>
+        <span class="color-option" data-color="#F44336" style="background: #F44336;" title="Red"></span>
+        <span class="color-option" data-color="#00BCD4" style="background: #00BCD4;" title="Cyan"></span>
+        <span class="color-option" data-color="#FFEB3B" style="background: #FFEB3B;" title="Yellow"></span>
+        <span class="color-option" data-color="#795548" style="background: #795548;" title="Brown"></span>
+      </div>
+      <input type="color" id="settings-color" style="margin-top: 15px; width: 100%; height: 40px;">
+      <div class="color-preview" id="settings-color-preview" style="width: 60px; height: 60px; margin: 15px auto; border-radius: 8px; border: 2px solid #ccc;"></div>
+      
+      <button id="save-color" class="btn-login" style="margin-top: 10px;">Save Color</button>
+      <p id="color-error" class="error-msg" style="display: none;"></p>
+    </div>
+  </div>
 </div>
 
 <style>

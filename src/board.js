@@ -1,10 +1,14 @@
 // Board - Kanban (No Sort, drag only)
-import { getLastExportPath, saveLastExportPath, loadProject, renameProject, saveProject, getJsonPath, saveJsonPath, getProjectLastContentChange } from './db_sqlite.js';
+import { 
+  getLastExportPath, saveLastExportPath, loadProject, renameProject, saveProject, 
+  getJsonPath, saveJsonPath, getProjectLastContentChange, loadAllProjectColors 
+} from './db_sqlite.js';
 import { open as openDialog, save as saveDialog, confirm } from '@tauri-apps/plugin-dialog';
 import { readTextFile, writeTextFile } from '@tauri-apps/plugin-fs';
 import { invoke } from '@tauri-apps/api/core';
 import { getCurrentWindow } from '@tauri-apps/api/window';
 import { verifySession, logoutUser } from './auth.js';
+import { openColorPicker, loadColors, applyElementColors, hexToRgba } from './color_picker.js';
 
 let columns = [];
 let cardsData = {};
@@ -369,6 +373,7 @@ function createColumn(column) {
     </div>
     <div class="cards" data-column-id="${column.id}"></div>
     <button class="add-card">+ Add Card</button>
+    <button class="color-btn column-color-btn" title="Cambia colore lista">⚙️</button>
   `;
   
   colEl.querySelector('.column-title').addEventListener('blur', async (e) => {
@@ -386,6 +391,34 @@ function createColumn(column) {
   
   colEl.querySelector('.add-card').addEventListener('click', () => {
     addCard(colEl.querySelector('.cards'), column.id);
+  });
+
+  // Color picker per colonna
+  colEl.querySelector('.column-color-btn').addEventListener('click', async (e) => {
+    e.stopPropagation();
+    await openColorPicker({
+      type: 'column',
+      projectId: currentProjectId,
+      itemId: column.id,
+      onSave: (colors) => {
+        applyElementColors(colEl, colors, 'column');
+        // Rimuovi sfondo dall'header per ereditare trasparenza dal genitore
+        const header = colEl.querySelector('.column-header');
+        if (header) {
+          header.style.background = 'transparent';
+          if (colors?.text) header.style.color = colors.text;
+        }
+      },
+      onReset: () => {
+        colEl.style.cssText = '';
+        colEl.classList.remove('has-custom-colors');
+        const header = colEl.querySelector('.column-header');
+        if (header) {
+          header.style.background = '';
+          header.style.color = '';
+        }
+      }
+    });
   });
   
   const cardsContainer = colEl.querySelector('.cards');
@@ -412,6 +445,9 @@ function createColumn(column) {
       }
     });
   }
+
+  // Applica colori personalizzati se esistono
+  loadAndApplyColumnColors(colEl, column.id);
   
   return colEl;
 }
@@ -428,6 +464,7 @@ function createCard(card) {
   cardEl.innerHTML = `
     <div class="card-left">
       <div class="card-drag-handle" title="Drag to move card">⋮⋮</div>
+      <button class="color-btn card-color-btn" title="Cambia colore scheda">⚙️</button>
     </div>
     <div class="card-right">
       <div class="card-text" contenteditable="true">${card.text}</div>
@@ -449,6 +486,23 @@ function createCard(card) {
     e.stopPropagation();
     openNote(card.id);
   });
+
+  // Color picker per scheda
+  cardEl.querySelector('.card-color-btn').addEventListener('click', async (e) => {
+    e.stopPropagation();
+    await openColorPicker({
+      type: 'card',
+      projectId: currentProjectId,
+      itemId: card.id,
+      onSave: (colors) => {
+        applyElementColors(cardEl, colors, 'card');
+      },
+      onReset: () => {
+        cardEl.style.cssText = '';
+        cardEl.classList.remove('has-custom-colors');
+      }
+    });
+  });
   
   // Elimina scheda
   cardEl.querySelector(".card-delete-btn").addEventListener("click", async (e) => {
@@ -466,6 +520,9 @@ function createCard(card) {
       }
     }
   });
+
+  // Applica colori personalizzati se esistono
+  loadAndApplyCardColors(cardEl, card.id);
   
   return cardEl;
 }
@@ -645,6 +702,9 @@ function render() {
       }
     });
   }
+
+  // Carica e applica colori personalizzati dopo il rendering
+  setTimeout(() => loadAllColorsForProject(), 100);
 }
 
 document.getElementById('back').addEventListener('click', async () => {
@@ -838,5 +898,72 @@ function stopAutoScroll() {
   if (autoScrollTimer) {
     clearInterval(autoScrollTimer);
     autoScrollTimer = null;
+  }
+}
+
+// === COLORI PERSONALIZZATI - CARICAMENTO E APPLICAZIONE ===
+
+// Carica e applica colori colonna
+async function loadAndApplyColumnColors(colEl, columnId) {
+  try {
+    const colors = await loadColors('column', currentProjectId, columnId);
+    if (colors) {
+      applyElementColors(colEl, colors, 'column');
+      // Rimuovi sfondo dall'header per ereditare trasparenza
+      const header = colEl.querySelector('.column-header');
+      if (header) {
+        header.style.background = 'transparent';
+        if (colors.text) header.style.color = colors.text;
+      }
+    }
+  } catch (err) {
+    console.error('Errore caricamento colori colonna:', err);
+  }
+}
+
+// Carica e applica colori scheda
+async function loadAndApplyCardColors(cardEl, cardId) {
+  try {
+    const colors = await loadColors('card', currentProjectId, cardId);
+    if (colors) {
+      applyElementColors(cardEl, colors, 'card');
+    }
+  } catch (err) {
+    console.error('Errore caricamento colori scheda:', err);
+  }
+}
+
+// Carica tutti i colori del progetto all'inizializzazione
+async function loadAllColorsForProject() {
+  try {
+    const allColors = await loadAllProjectColors(currentProjectId);
+    
+    // Applica colori colonne
+    document.querySelectorAll('.column').forEach(colEl => {
+      const columnId = colEl.dataset.id;
+      if (allColors.columns[columnId]) {
+        const colors = allColors.columns[columnId];
+        applyElementColors(colEl, colors, 'column');
+        const header = colEl.querySelector('.column-header');
+        if (header) {
+          if (colors.gradient) {
+            header.style.background = colors.gradient;
+          } else if (colors.bg) {
+            header.style.background = colors.bg;
+          }
+          if (colors.text) header.style.color = colors.text;
+        }
+      }
+    });
+    
+    // Applica colori schede
+    document.querySelectorAll('.card').forEach(cardEl => {
+      const cardId = cardEl.dataset.id;
+      if (allColors.cards[cardId]) {
+        applyElementColors(cardEl, allColors.cards[cardId], 'card');
+      }
+    });
+  } catch (err) {
+    console.error('Errore caricamento colori progetto:', err);
   }
 }

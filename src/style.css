@@ -235,6 +235,7 @@ body {
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+  margin-top: 1.2rem;
 }
 
 .project-meta {
@@ -245,19 +246,24 @@ body {
 
 .project-actions {
   display: flex;
-  gap: 0.25rem;
+  gap: 0.15rem;
   margin-top: auto;
   padding-top: 0.5rem;
+  flex-wrap: nowrap;
 }
 
 .project-actions button {
-  flex: 1;
-  padding: 0.3rem 0.4rem;
+  flex: 1 1 auto;
+  min-width: 0;
+  padding: 0.25rem 0.2rem;
   border: none;
   border-radius: 4px;
   cursor: pointer;
-  font-size: 0.7rem;
+  font-size: 0.65rem;
   transition: opacity 0.2s;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .project-actions button:hover {
@@ -273,6 +279,8 @@ body {
 .btn-note { background: rgba(99, 102, 241, 0.3); color: #818cf8; }
 .btn-export { background: rgba(255, 255, 255, 0.15); color: white; }
 .btn-delete { background: rgba(239, 68, 68, 0.3); color: #ef4444; }
+.btn-color { background: rgba(255, 255, 255, 0.1); color: #ccc; font-size: 0.65rem; padding: 0.2rem 0.3rem; }
+.btn-ren { background: rgba(255, 255, 255, 0.1); color: white; font-size: 0.65rem; }
 
 .project-actions .btn-note:hover { background: rgba(99, 102, 241, 0.5); }
 
@@ -305,6 +313,20 @@ body {
   min-width: 280px;
   max-width: 280px;
   padding: 1rem;
+  --custom-bg-rgb: 255, 255, 255;
+}
+
+/* When column has custom colors, propagate to children */
+.column.has-custom-colors .column-title:hover {
+  background: rgba(var(--custom-bg-rgb), 0.15);
+}
+
+.column.has-custom-colors .column-drag-handle:hover {
+  background: rgba(var(--custom-bg-rgb), 0.15);
+}
+
+.column.has-custom-colors .add-card:hover {
+  background: rgba(var(--custom-bg-rgb), 0.1);
 }
 
 .column-header {
@@ -1274,21 +1296,21 @@ body {
 /* Owner name in project card (home) */
 .owner-initials {
   position: absolute;
-  top: 0.75rem;
-  left: 0.75rem;
+  top: 0.5rem;
+  left: 0.5rem;
   display: inline-flex;
   align-items: center;
   justify-content: center;
   background: linear-gradient(135deg, #10b981 0%, #059669 100%);
   color: #fff;
-  font-size: 0.65rem;
+  font-size: 0.52rem;
   font-weight: 600;
-  padding: 0.2rem 0.5rem;
+  padding: 0.15rem 0.4rem;
   border-radius: 4px;
   letter-spacing: 0.3px;
   text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
   white-space: nowrap;
-  max-width: 10rem;
+  max-width: 8rem;
   overflow: hidden;
   text-overflow: ellipsis;
   z-index: 10;
@@ -1296,4 +1318,267 @@ body {
 
 .project-card-right {
   position: relative;
+}
+
+/* Color Picker for User Registration */
+.color-picker-container {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.color-palette {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  justify-content: center;
+}
+
+.color-option {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  cursor: pointer;
+  border: 3px solid transparent;
+  transition: all 0.2s ease;
+}
+
+.color-option:hover {
+  transform: scale(1.1);
+  border-color: rgba(255, 255, 255, 0.5);
+}
+
+.color-option.selected {
+  border-color: #fff;
+  box-shadow: 0 0 0 2px #000, 0 0 10px rgba(255, 255, 255, 0.5);
+  transform: scale(1.15);
+}
+
+.color-preview {
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+}
+
+/* User Color Badge */
+.user-color-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.25rem 0.75rem;
+  border-radius: 20px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: #fff;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+}
+
+/* ==========================================
+   COLOR PICKER MODAL - Sistema Colori
+   ========================================== */
+
+.color-picker-modal {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0, 0, 0, 0.7);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  opacity: 0;
+  visibility: hidden;
+  transition: all 0.3s ease;
+}
+
+.color-picker-modal.active {
+  opacity: 1;
+  visibility: visible;
+}
+
+.color-picker-content {
+  background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 12px;
+  padding: 1.5rem;
+  width: 90%;
+  max-width: 480px;
+  max-height: 90vh;
+  overflow-y: auto;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+  transform: scale(0.9);
+  transition: transform 0.3s ease;
+}
+
+.color-picker-modal.active .color-picker-content {
+  transform: scale(1);
+}
+
+.color-picker-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1.5rem;
+  padding-bottom: 1rem;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.color-picker-header h3 {
+  font-size: 1.25rem;
+  font-weight: 600;
+}
+
+.color-picker-section {
+  margin-bottom: 1.5rem;
+}
+
+.color-picker-section label {
+  display: block;
+  margin-bottom: 0.75rem;
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: rgba(255, 255, 255, 0.8);
+}
+
+.color-presets,
+.gradient-presets {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 0.75rem;
+}
+
+.color-swatch,
+.gradient-swatch {
+  width: 36px;
+  height: 36px;
+  border-radius: 8px;
+  border: 2px solid transparent;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.color-swatch:hover,
+.gradient-swatch:hover {
+  transform: scale(1.1);
+  border-color: rgba(255, 255, 255, 0.5);
+}
+
+.color-swatch.selected,
+.gradient-swatch.selected {
+  border-color: #fff;
+  box-shadow: 0 0 0 2px #000, 0 0 10px rgba(255, 255, 255, 0.5);
+  transform: scale(1.15);
+}
+
+.color-input {
+  width: 100%;
+  height: 40px;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 8px;
+  background: rgba(0, 0, 0, 0.3);
+  cursor: pointer;
+  padding: 4px;
+}
+
+.color-picker-preview {
+  background: rgba(0, 0, 0, 0.2);
+  border-radius: 8px;
+  padding: 1rem;
+  margin-bottom: 1.5rem;
+}
+
+.preview-box {
+  min-height: 60px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 8px;
+  font-weight: 500;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.color-picker-actions {
+  display: flex;
+  gap: 1rem;
+  justify-content: flex-end;
+}
+
+.color-picker-actions button {
+  padding: 0.75rem 1.5rem;
+}
+
+/* Pulsante colori sugli elementi */
+.color-btn {
+  background: transparent;
+  border: none;
+  color: rgba(255, 255, 255, 0.6);
+  cursor: pointer;
+  font-size: 0.85rem;
+  padding: 0.25rem;
+  border-radius: 4px;
+  transition: all 0.2s ease;
+  margin-left: 0.5rem;
+}
+
+.color-btn:hover {
+  color: #fff;
+  background: rgba(255, 255, 255, 0.1);
+}
+
+/* Color picker in colonna - pulsante compatto dopo Add Card */
+.column .color-btn.column-color-btn {
+  display: inline-block;
+  width: auto;
+  margin-top: 0.5rem;
+  text-align: center;
+  font-size: 0.85rem;
+  padding: 0.25rem 0.5rem;
+  opacity: 0.7;
+  transition: opacity 0.2s ease;
+}
+
+.column .color-btn.column-color-btn:hover {
+  opacity: 1;
+}
+
+/* Card left con color picker in basso */
+.card-left {
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.25rem 0;
+}
+
+.card-left .card-drag-handle {
+  flex: 1;
+}
+
+.card-left .card-color-btn {
+  margin-left: 0;
+  margin-top: 0.5rem;
+  font-size: 0.75rem;
+  opacity: 0.7;
+}
+
+.card-left .card-color-btn:hover {
+  opacity: 1;
+}
+
+/* Elementi con colori personalizzati */
+.project-card.has-custom-colors,
+.column.has-custom-colors,
+.card.has-custom-colors {
+  transition: all 0.3s ease;
+}
+
+/* Indicatore colore personalizzato */
+.custom-color-indicator {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+  display: inline-block;
+  margin-left: 0.25rem;
 }

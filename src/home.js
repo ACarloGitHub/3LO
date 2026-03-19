@@ -1,5 +1,8 @@
 // Home - Projects Management (con SQLite)
-import { getAllProjects, saveProject, deleteProject, loadProject, initDB, renameProject, saveLastExportPath, saveProjectOrder } from './db_sqlite.js';
+import { 
+  getAllProjects, saveProject, deleteProject, loadProject, initDB, renameProject, 
+  saveLastExportPath, saveProjectOrder, getProjectColorsOverride 
+} from './db_sqlite.js';
 import { save, confirm } from '@tauri-apps/plugin-dialog';
 import { writeTextFile } from '@tauri-apps/plugin-fs';
 import logger from './logger.js';
@@ -11,8 +14,10 @@ import {
   toggleProjectLocked,
   getUsersWithShareStatus,
   setProjectShare,
-  getUsernameById
+  getUsernameById,
+  getUserColor
 } from './auth.js';
+import { openColorPicker, applyElementColors } from './color_picker.js';
 
 let projects = [];
 let currentSortMode = 'custom';
@@ -84,8 +89,9 @@ function getDisplayName(username) {
   return name.substring(0, 13) + '...';
 }
 
-// Cache for usernames to avoid repeated DB calls
+// Cache for usernames and colors to avoid repeated DB calls
 const usernameCache = {};
+const userColorCache = {};
 
 async function getOwnerDisplayName(userId) {
   if (!userId) return '';
@@ -98,6 +104,16 @@ async function getOwnerDisplayName(userId) {
     return getDisplayName(username);
   }
   return '';
+}
+
+async function getOwnerColor(userId) {
+  if (!userId) return '#4CAF50';
+  if (userColorCache[userId]) {
+    return userColorCache[userId];
+  }
+  const color = await getUserColor(userId);
+  userColorCache[userId] = color;
+  return color;
 }
 
 // ==========================================
@@ -146,9 +162,10 @@ async function render() {
     const visibilityIcon = isVisible ? '🐵' : '🙈';
     const lockedIcon = isLocked ? '🔒' : '🔓';
     
-    // Get owner name for badge
+    // Get owner name and color for badge
     const ownerName = await getOwnerDisplayName(proj.created_by);
-    const ownerBadge = ownerName ? `<span class="owner-initials" title="Owner: ${usernameCache[proj.created_by] || 'Unknown'}">${ownerName}</span>` : '';
+    const ownerColor = await getOwnerColor(proj.created_by);
+    const ownerBadge = ownerName ? `<span class="owner-initials" title="Owner: ${usernameCache[proj.created_by] || 'Unknown'}" style="background: ${ownerColor}; color: #fff; text-shadow: 0 1px 2px rgba(0,0,0,0.3);">${ownerName}</span>` : '';
     
     // Release icon (only for owner of claimed projects)
     const canRelease = isOwner && !isOrphan;
@@ -169,12 +186,12 @@ async function render() {
       </div>
       <div class="project-card-right">
         ${ownerBadge}
-        <div class="project-icon">🌙</div>
         <div class="project-title">${proj.name}</div>
         <div class="project-meta">${formatDate(proj.created)}</div>
         ${canClaim ? '<button class="btn-claim" data-id="' + proj.id + '" title="Claim this project">🏷️ Claim</button>' : ''}
         <div class="project-actions">
           <button class="btn-open" data-id="${proj.id}" ${!canOpen ? 'disabled' : ''} title="${!canOpen ? 'Project is locked' : 'Open project'}">Open</button>
+          <button class="btn-color" data-id="${proj.id}" title="Cambia colore progetto">⚙️</button>
           <button class="btn-ren" data-id="${proj.id}">Ren</button>
           <button class="btn-export" data-id="${proj.id}">Exp</button>
           <button class="btn-delete" data-id="${proj.id}">Del</button>
@@ -187,6 +204,9 @@ async function render() {
   if (currentSortMode === 'custom' && typeof Sortable !== 'undefined') {
     initProjectSortable();
   }
+
+  // Carica e applica colori personalizzati ai progetti
+  setTimeout(() => loadAndApplyProjectColors(), 100);
 }
 
 // ==========================================
@@ -296,6 +316,43 @@ function setupEventDelegation() {
     if (btn.classList.contains('btn-open')) {
       localStorage.setItem('3lo_current_project', id);
       window.location.href = './board.html';
+      return;
+    }
+
+    // ── COLOR PICKER ──────────────────────────────
+    if (btn.classList.contains('btn-color')) {
+      e.stopPropagation();
+      try {
+        await openColorPicker({
+          type: 'project',
+          projectId: id,
+          onSave: (colors) => {
+            // Applica colori alla card del progetto
+            const card = btn.closest('.project-card');
+            if (card && colors) {
+              applyElementColors(card, colors, 'project');
+              // Aggiungi indicatore visivo
+              if (!card.querySelector('.custom-color-indicator')) {
+                const indicator = document.createElement('span');
+                indicator.className = 'custom-color-indicator';
+                indicator.title = 'Colori personalizzati';
+                card.querySelector('.project-title').appendChild(indicator);
+              }
+            }
+          },
+          onReset: () => {
+            const card = btn.closest('.project-card');
+            if (card) {
+              card.style.cssText = '';
+              card.classList.remove('has-custom-colors');
+              const indicator = card.querySelector('.custom-color-indicator');
+              if (indicator) indicator.remove();
+            }
+          }
+        });
+      } catch (err) {
+        console.error('Error opening color picker:', err);
+      }
       return;
     }
     
@@ -564,6 +621,33 @@ function closeShareDialog() {
     modal.remove();
   }
   currentShareProjectId = null;
+}
+
+// ==========================================
+// COLORI PERSONALIZZATI - CARICAMENTO
+// ==========================================
+
+async function loadAndApplyProjectColors() {
+  const cards = document.querySelectorAll('.project-card');
+  for (const card of cards) {
+    const projectId = card.dataset.id;
+    try {
+      const colors = await getProjectColorsOverride(projectId);
+      if (colors) {
+        applyElementColors(card, colors, 'project');
+        // Aggiungi indicatore visivo
+        const titleEl = card.querySelector('.project-title');
+        if (titleEl && !card.querySelector('.custom-color-indicator')) {
+          const indicator = document.createElement('span');
+          indicator.className = 'custom-color-indicator';
+          indicator.title = 'Colori personalizzati';
+          titleEl.appendChild(indicator);
+        }
+      }
+    } catch (err) {
+      console.error('Errore caricamento colori progetto:', projectId, err);
+    }
+  }
 }
 
 // ==========================================
